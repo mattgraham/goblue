@@ -1,4 +1,4 @@
-<div class="grid grid-cols-1 gap-2 mb-12 mx-auto">
+<div class="grid grid-cols-1 gap-2 mb-12 mx-auto w-full">
     <% @games.each do |item| %>
         <% if item['competitions'][0]['competitors'][1]['team']['id'] == "130" %>
             <% home_away = 'away' %>
@@ -13,7 +13,7 @@
             <% status = 'Scheduled' %>
         <% end %>
 
-        <a href="<%= item['links'][0]['href'].to_s %>" target="_blank" class="p-2 shadow-sm border rounded-lg <% if home_away == 'home' %> bg-blue-950 text-white <% end %>">
+        <a href="<%= item['links'][0]['href'].to_s %>" target="_blank" class="p-2 w-full shadow-sm border rounded <% if item['date'].to_time.before?(Date.today) %>opacity-70<% end %> <% if item['date'].to_time.between?(Date.today, Date.today + 6) %>w-full max-w-screen-xl<% else %> max-w-screen-lg <% end %> mx-auto <% if home_away == 'home' %> bg-blue-950 text-white <% end %> hover:opacity-100 transition-all ease-in-out">
             <div class="flex items-center lg:gap-2">
                 <div class="text-left flex flex-col lg:flex-row items-center col-span-2">
                     <% if item['competitions'][0]['competitors'][1]['team']['id'] == "130" %>
