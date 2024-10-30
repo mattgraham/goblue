@@ -6,8 +6,10 @@ class ProwlersController < ApplicationController
   def index
     options = Selenium::WebDriver::Chrome::Options.new
     options.add_argument('--headless')
+    options.addArguments("--no-sandbox");
+    options.addArguments("--disable-gpu");
     driver = Selenium::WebDriver.for(:chrome, options: options)
-
+    
     url = 'https://www.phprowlers.com/stats#/team-schedule'
     driver.get(url)
     wait = Selenium::WebDriver::Wait.new(timeout: 10)
