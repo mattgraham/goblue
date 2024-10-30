@@ -5,7 +5,7 @@ class ProwlersController < ApplicationController
   
   def index
     options = Selenium::WebDriver::Chrome::Options.new
-    options.add_argument('--headless')
+    options.add_argument('--headless');
     options.addArgument("--no-sandbox");
     options.addArgument("--disable-gpu");
     driver = Selenium::WebDriver.for(:chrome, options: options)
