@@ -1,11 +1,19 @@
 class ProwlersController < ApplicationController
   require 'nokogiri'
   require 'open-uri'
-
+  require 'selenium-webdriver'
+  
   def index
-    browser = Watir::Browser.new
-    browser.goto 'https://www.phprowlers.com/stats#/team-schedule'
-    doc = Nokogiri::HTML.parse(browser.html).css('.schedule > .game')
+    options = Selenium::WebDriver::Chrome::Options.new
+    options.add_argument('--headless')
+    driver = Selenium::WebDriver.for(:chrome, options: options)
+
+    url = 'https://www.phprowlers.com/stats#/team-schedule'
+    driver.get(url)
+    wait = Selenium::WebDriver::Wait.new(timeout: 10)
+    wait.until { driver.find_element(class: 'team-schedule') }
+    page_html = driver.page_source
+    doc = Nokogiri::HTML(page_html).css('.schedule > .game')
     games = []
 
     doc.each do |game|
@@ -42,4 +50,5 @@ class ProwlersController < ApplicationController
 
     render json: games
   end
+
 end

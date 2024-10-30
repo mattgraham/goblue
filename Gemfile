@@ -12,8 +12,7 @@ gem "jbuilder"
 # gem "redis", ">= 4.0.1"
 gem "nokogiri"
 gem "open-uri" 
-gem "watir"
-
+gem "selenium-webdriver"
 
 # Windows does not include zoneinfo files, so bundle the tzinfo-data gem
 gem "tzinfo-data", platforms: %i[ windows jruby ]
@@ -50,5 +49,4 @@ end
 group :test do
   # Use system testing [https://guides.rubyonrails.org/testing.html#system-testing]
   gem "capybara"
-  gem "selenium-webdriver"
 end
