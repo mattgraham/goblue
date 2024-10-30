@@ -53,5 +53,4 @@ class ProwlersController < ApplicationController
 
     render json: games
   end
-
 end
