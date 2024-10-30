@@ -1,0 +1,2 @@
+class Prowler < ApplicationRecord    
+end
