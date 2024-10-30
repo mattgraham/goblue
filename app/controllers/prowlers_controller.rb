@@ -12,7 +12,7 @@ class ProwlersController < ApplicationController
     
     url = 'https://www.phprowlers.com/stats#/team-schedule'
     driver.get(url)
-    wait = Selenium::WebDriver::Wait.new(timeout: 10)
+    wait = Selenium::WebDriver::Wait.new(timeout: 5)
     wait.until { driver.find_element(class: 'team-schedule') }
     page_html = driver.page_source
     doc = Nokogiri::HTML(page_html).css('.schedule > .game')
