@@ -22,11 +22,12 @@ class ProwlersController < ApplicationController
         team1_name = teams[0].css('.name').text
         team1_score = teams[0].css('.score').text
 
+        at_vs = game.css('.at-vs').text
+
         team2_city = teams[1].css('.city').text
         team2_name = teams[1].css('.name').text
         team2_score = teams[1].css('.score').text
 
-        at_vs = game.css('.at-vs').text
         status = game.css('.status').text
         result = game.css('.result').text
         
@@ -37,12 +38,12 @@ class ProwlersController < ApplicationController
                 name: team1_name,
                 score: team1_score
             },
+            at_vs: at_vs,
             team2: {
                 city: team2_city,
                 name: team2_name,
                 score: team2_score
             },
-            at_vs: at_vs,
             status: status,
             result: result
         })
