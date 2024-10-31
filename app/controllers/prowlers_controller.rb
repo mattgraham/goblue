@@ -12,7 +12,7 @@ class ProwlersController < ApplicationController
     
     url = 'https://www.phprowlers.com/stats#/team-schedule'
     driver.get(url)
-    wait = Selenium::WebDriver::Wait.new(timeout: 5)
+    wait = Selenium::WebDriver::Wait.new(timeout: 2)
     wait.until { driver.find_element(class: 'team-schedule') }
     page_html = driver.page_source
     doc = Nokogiri::HTML(page_html).css('.schedule > .game')
@@ -33,8 +33,16 @@ class ProwlersController < ApplicationController
         status = game.css('.status').text
         result = game.css('.result').text
         
+        date = DateTime.parse(game.css('.datetime').text)
+        
+        if at_vs == 'vs'
+          location = team1_city
+        elsif at_vs == 'at'
+          location = team2_city 
+        end
+
         games.push({
-            datetime: game.css('.datetime').text,
+            datetime: date,
             team1: {
                 city: team1_city,
                 name: team1_name,
@@ -46,11 +54,38 @@ class ProwlersController < ApplicationController
                 name: team2_name,
                 score: team2_score
             },
+            location: location,
             status: status,
             result: result
         })
     end
 
     render json: games
+  end
+
+  def calendar
+    require 'net/http'
+    require 'json'
+    require 'icalendar'
+    cal = Icalendar::Calendar.new
+
+    url = URI.parse('http://localhost:3000/prowlers.json')
+    response = Net::HTTP.get_response(url)
+    games = JSON.parse(response.body)
+
+    games.each do |game|
+      event = Icalendar::Event.new
+      event.dtstart = DateTime.parse(game['datetime'])
+      event.dtend = DateTime.parse(game['datetime']) + 3.hours
+      event.summary = "#{game['team1']['name']} #{game['at_vs']} #{game['team2']['name']}"
+      event.location =  "#{game['location']}"
+      cal.add_event(event)
+    end
+
+    cal.publish
+    respond_to do |format|
+      format.html
+      format.ics { render plain: cal.to_ical }
+    end
   end
 end

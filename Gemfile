@@ -13,6 +13,7 @@ gem "jbuilder"
 gem "nokogiri"
 gem "open-uri" 
 gem "selenium-webdriver"
+gem "icalendar"
 
 # Windows does not include zoneinfo files, so bundle the tzinfo-data gem
 gem "tzinfo-data", platforms: %i[ windows jruby ]
