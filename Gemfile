@@ -1,5 +1,7 @@
 source "https://rubygems.org"
 
+ruby "3.3.4"
+
 # Bundle edge Rails instead: gem "rails", github: "rails/rails", branch: "main"
 gem "rails", "~> 7.2.1"
 gem "sprockets-rails"
@@ -11,7 +13,7 @@ gem "stimulus-rails"
 gem "jbuilder"
 # gem "redis", ">= 4.0.1"
 gem "nokogiri"
-gem "open-uri" 
+gem "open-uri"
 gem "selenium-webdriver"
 gem "icalendar"
 
@@ -24,7 +26,7 @@ gem "bootsnap", require: false
 # Use Active Storage variants [https://guides.rubyonrails.org/active_storage_overview.html#transforming-images]
 # gem "image_processing", "~> 1.2"
 
-gem 'httparty'
+gem "httparty"
 gem "tailwindcss-rails", "~> 3.1"
 
 group :development, :test do
@@ -36,7 +38,7 @@ group :development, :test do
 
   # Omakase Ruby styling [https://github.com/rails/rubocop-rails-omakase/]
   gem "rubocop-rails-omakase", require: false
-  gem 'dotenv-rails'
+  gem "dotenv-rails"
 end
 
 group :development do
