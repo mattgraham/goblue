@@ -8,11 +8,13 @@ class DashboardController < ApplicationController
     response = HTTParty.get("https://apinext.collegefootballdata.com/games?year=2025&team=Michigan",
       headers: { "Authorization" => "Bearer 15AqBDGCRX6xgFTZ8JhWZEv2zPEDIl9EUmxk4gH4AX5TQXBSRanN9QOSd5E9OXDT" })
     games_data = JSON.parse(response.body)
+
     @games = games_data.map do |game|
       game["startDate"] = DateTime.parse(game["startDate"]) if game["startDate"].present?
       game
     end
   end
+
 
   def team(team_id)
     response = HTTParty.get("https://site.api.espn.com/apis/site/v2/sports/football/college-football/teams/#{team_id}")
