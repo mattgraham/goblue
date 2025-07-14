@@ -1,39 +1,57 @@
-<table class="w-full max-w-screen-2xl mx-auto my-12 text-sm">
-  <thead class="">
-    <tr class="hidden md:table-row text-left text-sm">
-      <th class="px-2 border-b border-gray-200">Date</th>
-      <th class="px-2 border-b border-gray-200">Time</th>
-      <th class="px-2 border-b border-gray-200">Away</th>
-      <th class="px-2 border-b border-gray-200">Home</th>
-      <th class="px-2 border-b border-gray-200">Location</th>
-    </tr>
-  </thead>
-  <tbody>
-    <% @games.each do |game| %>
-    <tr class="text-center md:text-left w-full flex flex-col md:table-row border-b border-gray-200 even:bg-silver-100 p-2">
-      <td class="p-2"><%= game["startDate"].strftime("%A, %B %d, %Y") %></td>
-      <td class="p-2">
-        <% if game["startTimeTBD"].to_s == 'true' %>
-          <span class="text-gray-200">TBD</span>
-        <% else %>
-          <%= game["startDate"].strftime("%I:%M %p") %>
-        <% end %>
-      </td>
-      <td class="p-2">
-        <div class="flex items-center justify-center md:justify-start">
-          <%= image_tag team(game["awayId"])[:logo], class: "h-10 w-10" %>
-          <span class="ml-2"><%= team(game["awayId"])[:name] %></span>
-        </div>
-      </td>
-      <td class="p-2">
-        <div class="flex items-center justify-center md:justify-start">
-          <span class="mr-2">@</span>
-          <%= image_tag team(game["homeId"])[:logo], class: "h-10 w-10" %>
-          <span class="ml-2"><%= team(game["homeId"])[:name] %></span>
-        </div>
-      </td>      
-      <td class="p-2"><%= game["venue"] %></td>
-    </tr>
-    <% end %>
-  </tbody>
-</table>
+<div data-controller="game-filter" class="w-full max-w-screen-2xl mx-auto my-12">
+  <!-- Filter Button -->
+  <div class="mb-6 text-center">
+    <button 
+      data-game-filter-target="button"
+      data-action="click->game-filter#toggle"
+      class="px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-lg shadow-md transition-colors duration-200"
+    >
+      Home Games Only
+    </button>
+  </div>
+
+  <table class="w-full text-sm">
+    <thead class="">
+      <tr class="hidden md:table-row text-left text-sm">
+        <th class="px-2 border-b border-gray-200">Date</th>
+        <th class="px-2 border-b border-gray-200">Time</th>
+        <th class="px-2 border-b border-gray-200">Away</th>
+        <th class="px-2 border-b border-gray-200">Home</th>
+        <th class="px-2 border-b border-gray-200">Location</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% @games.each do |game| %>
+      <tr 
+        data-game-filter-target="gameRow"
+        data-home-team-id="<%= game['homeId'] %>"
+        class="text-center md:text-left w-full flex flex-col md:table-row border-b border-gray-200 even:bg-silver-100 p-2 <% if game['homeId'] == 130 %>bg-blue-50<% end %>"
+      >
+
+        <td class="p-2"><%= game["startDate"].strftime("%A, %B %d, %Y") %></td>
+        <td class="p-2">
+          <% if game["startTimeTBD"].to_s == 'true' %>
+            <span class="text-gray-200">TBD</span>
+          <% else %>
+            <%= game["startDate"].strftime("%I:%M %p") %>
+          <% end %>
+        </td>
+        <td class="p-2">
+          <div class="flex items-center justify-center md:justify-start">
+            <%= image_tag team(game["awayId"])[:logo], class: "h-10 w-10" %>
+            <span class="ml-2"><%= team(game["awayId"])[:name] %></span>
+          </div>
+        </td>
+        <td class="p-2">
+          <div class="flex items-center justify-center md:justify-start">
+            <span class="mr-2">@</span>
+            <%= image_tag team(game["homeId"])[:logo], class: "h-10 w-10" %>
+            <span class="ml-2"><%= team(game["homeId"])[:name] %></span>
+          </div>
+        </td>      
+        <td class="p-2"><%= game["venue"] %></td>
+      </tr>
+      <% end %>
+    </tbody>
+  </table>
+</div>
