@@ -10,7 +10,12 @@ class DashboardController < ApplicationController
     games_data = JSON.parse(response.body)
 
     @games = games_data.map do |game|
-      game["startDate"] = DateTime.parse(game["startDate"]) if game["startDate"].present?
+      if game["startDate"].present?
+        # Parse the UTC time and convert to EST
+        utc_time = DateTime.parse(game["startDate"])
+        est_time = utc_time.in_time_zone("Eastern Time (US & Canada)")
+        game["startDate"] = est_time
+      end
       game
     end
   end

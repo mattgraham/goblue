@@ -1,9 +1,3 @@
-<%= @teams_data %>
-
-<%= @games.first do |game| %>
-  <%= game["homeTeam"] %>
-<% end %>
-
 <div class="grid grid-cols-1 gap-2 mb-12 mx-auto w-full ">
     <% @games.each do |game| %>
     <div class="rounded border border-gray-200 p-4 text-center flex flex-col <% if game["homeTeam"] == 'Michigan' %>border-blue-700 bg-slate-100<% end %>">
