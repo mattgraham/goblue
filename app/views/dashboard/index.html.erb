@@ -1,27 +1,39 @@
-<div class="grid grid-cols-1 gap-2 mb-12 mx-auto w-full ">
+<table class="w-full max-w-screen-2xl mx-auto my-12 text-sm">
+  <thead class="">
+    <tr class="hidden md:table-row text-left text-sm">
+      <th class="px-2 border-b border-gray-200">Date</th>
+      <th class="px-2 border-b border-gray-200">Time</th>
+      <th class="px-2 border-b border-gray-200">Away</th>
+      <th class="px-2 border-b border-gray-200">Home</th>
+      <th class="px-2 border-b border-gray-200">Location</th>
+    </tr>
+  </thead>
+  <tbody>
     <% @games.each do |game| %>
-    <div class="rounded border border-gray-200 p-4 text-center flex flex-col <% if game["homeTeam"] == 'Michigan' %>border-blue-700 bg-slate-100<% end %>">
-        <div class="flex flex-row items-center space-x-4 mx-auto">
-          <div class="flex items-center">
-            <%= image_tag team(game["awayId"])[:logo], class: "h-10 w-10" %>
-            <span class="ml-2"><%= team(game["awayId"])[:name] %></span>
-          </div>
-          <span>at</span>
-          <div class="flex items-center">
-            <%= image_tag team(game["homeId"])[:logo], class: "h-10 w-10" %>
-            <span class="ml-2"><%= team(game["homeId"])[:name] %></span>
-          </div>
+    <tr class="text-center md:text-left w-full flex flex-col md:table-row border-b border-gray-200 even:bg-silver-100 p-2">
+      <td class="p-2"><%= game["startDate"].strftime("%A, %B %d, %Y") %></td>
+      <td class="p-2">
+        <% if game["startTimeTBD"].to_s == 'true' %>
+          <span class="text-gray-200">TBD</span>
+        <% else %>
+          <%= game["startDate"].strftime("%I:%M %p") %>
+        <% end %>
+      </td>
+      <td class="p-2">
+        <div class="flex items-center justify-center md:justify-start">
+          <%= image_tag team(game["awayId"])[:logo], class: "h-10 w-10" %>
+          <span class="ml-2"><%= team(game["awayId"])[:name] %></span>
         </div>
-        <div class="flex flex-row text-sm gap-1 text-center items-center mx-auto">
-            <div><%= game["startDate"].strftime("%B %d, %Y") %></div>
-            <div><% if game["startTimeTBD"].to_s == 'true' %>
-                TBD
-            <% else %>
-                at <%= game["startDate"].strftime("%I:%M %p") %>
-            <% end %>
-            </div>
-            <div>at <%= game["venue"] %></div>
+      </td>
+      <td class="p-2">
+        <div class="flex items-center justify-center md:justify-start">
+          <span class="mr-2">@</span>
+          <%= image_tag team(game["homeId"])[:logo], class: "h-10 w-10" %>
+          <span class="ml-2"><%= team(game["homeId"])[:name] %></span>
         </div>
-    </div>
+      </td>      
+      <td class="p-2"><%= game["venue"] %></td>
+    </tr>
     <% end %>
-</div>
+  </tbody>
+</table>
