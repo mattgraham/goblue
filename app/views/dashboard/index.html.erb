@@ -1,5 +1,14 @@
-<div data-controller="game-filter" class="w-full max-w-screen-2xl mx-auto my-12">
-  <div class="border border-gray-200 rounded-lg w-auto mx-auto text mx-4">
+<div class="w-full max-w-screen-2xl mx-auto my-12">
+  <div class="text-lg">
+    Michigan Wolverines
+    <% if @fetch_rankings && @fetch_rankings['130'] %>
+      <span class="text-blue-600 font-semibold ml-2">#<%= @fetch_rankings['130'][:current] %></span>
+    <% end %>
+  </div>
+</div>
+
+<div data-controller="game-filter" class="w-full max-w-screen-2xl mx-auto my-12 flex gap-6">
+  <div class="border border-gray-200 rounded-lg">
     <div class="pl-4 text-lg p-2 border-b border-gray-200">2025 Schedule</div>
     <div class="pl-4 text-[10px] uppercase p-2 bg-gray-50 border-b border-gray-200">Regular Season</div>
     <div class="text-sm">
@@ -13,13 +22,23 @@
                 @
               <% end %>
             </div>
-            <div class="font-medium flex items-center gap-2">
+            <div class="font-medium flex items-center gap-2 mr-2">
               <% if game['homeId'] == '130' %>
                 <%= image_tag team(game["awayId"])[:logo], class: "h-6 w-6" %>
-                <%= team(game['awayId'])[:name] %>
+                <div>
+                  <% if @fetch_rankings && @fetch_rankings[game['awayId']] %>
+                    <span class="text-gray-400 text-xs"><%= @fetch_rankings[game['awayId']][:current] %></span>
+                  <% end %>
+                  <%= team(game['awayId'])[:name] %>
+                </div>
               <% else %>
                 <%= image_tag team(game["homeId"])[:logo], class: "h-6 w-6" %>
-                <%= team(game['homeId'])[:name] %>
+                <div>
+                  <% if @fetch_rankings && @fetch_rankings[game['homeId']] %>
+                    <span class="text-gray-400 text-xs"><%= @fetch_rankings[game['homeId']][:current] %></span>
+                  <% end %>
+                  <%= team(game['homeId'])[:name] %>
+                </div>
               <% end %>
             </div>
             <div class="flex flex-col text-xs text-gray-600 ml-auto text-right">
@@ -51,14 +70,14 @@
     </div>
   </div>
 
-  <div class="border border-gray-200 rounded-lg w-auto mx-auto text mx-4 mt-8">
+  <div class="border border-gray-200 rounded-lg">
     <div class="pl-4 text-lg p-2 border-b border-gray-200">AP Top 25 Rankings</div>
     <div class="pl-4 text-[10px] uppercase p-2 bg-gray-50 border-b border-gray-200">Current Week</div>
     <div class="text-sm">
       <% if @fetch_rankings && @fetch_rankings.any? %>
         <% @fetch_rankings.sort_by { |team_id, rank_data| rank_data[:current] }.each do |team_id, rank_data| %>
           <div class="flex items-center p-3 border-b border-gray-200 gap-2">
-            <div class="text-blue-600 font-semibold text-lg">
+            <div class="text-blue-600 font-semibold">
               #<%= rank_data[:current] %>
             </div>
             <div class="font-medium flex items-center gap-2">
@@ -92,5 +111,6 @@
       <% end %>
     </div>
   </div>
-  </div>
+
+  
 </div>
