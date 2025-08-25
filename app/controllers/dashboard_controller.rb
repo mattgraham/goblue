@@ -15,6 +15,8 @@ class DashboardController < ApplicationController
     @games = @dashboard_data[:games]
     @fetch_rankings = @dashboard_data[:rankings]
     @teams_cache = @dashboard_data[:teams_cache]
+    @team_records = @dashboard_data[:team_records]
+    @conference_standings = @dashboard_data[:conference_standings]
 
     load_time = Time.current - start_time
     Rails.logger.info "Dashboard loaded in #{load_time.round(2)} seconds"
@@ -112,13 +114,19 @@ class DashboardController < ApplicationController
     # Fetch rankings
     rankings = fetch_rankings
 
+    # Fetch team records and conference standings
+    team_records = fetch_team_records
+    conference_standings = fetch_conference_standings
+
     # Build teams cache to avoid N+1 queries
     teams_cache = build_teams_cache(games, rankings)
 
     {
       games: games,
       rankings: rankings,
-      teams_cache: teams_cache
+      teams_cache: teams_cache,
+      team_records: team_records,
+      conference_standings: conference_standings
     }
   end
 
@@ -220,6 +228,94 @@ class DashboardController < ApplicationController
         Rails.logger.error "Failed to fetch rankings: #{e.message}"
         Rails.logger.error "Backtrace: #{e.backtrace.first(5)}"
         # Return empty hash if rankings fetch fails
+        {}
+      end
+    end
+  end
+
+  def fetch_team_records
+    # Cache team records for 30 minutes
+    Rails.cache.fetch("team_records", expires_in: 30.minutes) do
+      begin
+        Rails.logger.info "Fetching team records from ESPN API..."
+
+        # Fetch Michigan's team data which includes record and standingSummary
+        response = HTTParty.get(
+          "https://site.api.espn.com/apis/site/v2/sports/football/college-football/teams/130",
+          timeout: 10
+        )
+        data = JSON.parse(response.body)
+        team_data = data["team"]
+
+                if team_data
+          # Handle the record structure which has an 'items' array
+          records = team_data["record"]&.dig("items") || []
+          overall_record = records.find { |r| r["type"] == "total" }
+          conference_record = records.find { |r| r["type"] == "conference" }
+
+          # Extract standing summary
+          standing_summary = team_data["standingSummary"] || "N/A"
+
+          # Extract detailed record stats
+          record_stats = {}
+          if overall_record && overall_record["stats"]
+            overall_record["stats"].each do |stat|
+              record_stats[stat["name"]] = stat["value"]
+            end
+          end
+
+          {
+            "130" => {
+              overall: overall_record ? "#{overall_record['wins']}-#{overall_record['losses']}" : "N/A",
+              conference: conference_record ? "#{conference_record['wins']}-#{conference_record['losses']}" : "N/A",
+              standing_summary: standing_summary,
+              record_stats: record_stats,
+              summary: overall_record ? overall_record["summary"] : "N/A"
+            }
+          }
+                else
+          { "130" => { overall: "N/A", conference: "N/A", standing_summary: "N/A", record_stats: {}, summary: "N/A" } }
+                end
+      rescue => e
+        Rails.logger.error "Failed to fetch team records: #{e.message}"
+        { "130" => { overall: "N/A", conference: "N/A", standing_summary: "N/A", record_stats: {}, summary: "N/A" } }
+      end
+    end
+  end
+
+  def fetch_conference_standings
+    # Cache conference standings for 30 minutes
+    Rails.cache.fetch("conference_standings", expires_in: 30.minutes) do
+      begin
+        Rails.logger.info "Fetching conference standings from ESPN API..."
+
+        # Fetch Big Ten standings (conference ID for Big Ten is typically 4)
+        response = HTTParty.get(
+          "https://site.api.espn.com/apis/site/v2/sports/football/college-football/standings?season=2025&seasontype=2&group=4",
+          timeout: 10
+        )
+        data = JSON.parse(response.body)
+
+        standings = {}
+
+        if data["groups"]&.first && data["groups"].first["standings"]
+          data["groups"].first["standings"].each do |standing|
+            team_id = standing.dig("team", "id")
+            if team_id
+              standings[team_id] = {
+                rank: standing["rank"],
+                wins: standing["stats"].find { |s| s["name"] == "wins" }&.dig("value") || 0,
+                losses: standing["stats"].find { |s| s["name"] == "losses" }&.dig("value") || 0,
+                conference_wins: standing["stats"].find { |s| s["name"] == "conferenceWins" }&.dig("value") || 0,
+                conference_losses: standing["stats"].find { |s| s["name"] == "conferenceLosses" }&.dig("value") || 0
+              }
+            end
+          end
+        end
+
+        standings
+      rescue => e
+        Rails.logger.error "Failed to fetch conference standings: #{e.message}"
         {}
       end
     end

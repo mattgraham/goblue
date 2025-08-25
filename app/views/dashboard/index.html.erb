@@ -1,10 +1,87 @@
-<div class="w-full max-w-screen-2xl mx-auto my-12">
-  <div class="text-lg">
-    Michigan Wolverines
-    <% if @fetch_rankings && @fetch_rankings['130'] %>
-      <span class="text-blue-600 font-semibold ml-2">#<%= @fetch_rankings['130'][:current] %></span>
-    <% end %>
+<div class="w-full p-8">
+  <div class="flex items-center gap-2">
+    <%= image_tag team(130)[:logo], class: "h-24 w-24" %>
+    <div class="text-4xl uppercase tracking-wide flex items-center gap-1">
+      <% if @fetch_rankings && @fetch_rankings['130'] %>
+        <span class="text-gray-500 text-base ml-2">#<%= @fetch_rankings['130'][:current] %></span>
+      <% end %>
+      <div class="font-bold">Michigan</div><div class="">Wolverines</div>
+    </div>
   </div>
+  
+  <!-- Team Record and Standing Summary -->
+  <% if @team_records && @team_records['130'] %>
+    <div class="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-6">
+          <div class="text-center">
+            <div class="text-sm text-gray-600 uppercase tracking-wide">Overall Record</div>
+            <div class="text-2xl font-bold text-blue-900"><%= @team_records['130'][:summary] %></div>
+          </div>
+          
+          <% if @team_records['130'][:conference] != "N/A" %>
+            <div class="text-center">
+              <div class="text-sm text-gray-600 uppercase tracking-wide">Conference</div>
+              <div class="text-xl font-bold text-blue-900"><%= @team_records['130'][:conference] %> <div class="text-xs text-gray-500">(<%= @team_records['130'][:record_stats]['divisionWins'].to_i %>-<%= @team_records['130'][:record_stats]['divisionLosses'].to_i %>)</div></div>
+            </div>
+          <% end %>
+        </div>
+        
+        <div class="text-right">
+          <div class="text-sm text-gray-600 uppercase tracking-wide">Conference Standing</div>
+          <div class="text-lg font-bold text-blue-900"><%= @team_records['130'][:standing_summary] %></div>
+          <div class="text-xs text-gray-500">(<%= @team_records['130'][:record_stats]['divisionWins'].to_i %>-<%= @team_records['130'][:record_stats]['divisionLosses'].to_i %>)</div>
+        </div>
+      </div>
+      
+      <!-- Detailed Record Stats -->
+      <% if @team_records['130'][:record_stats].any? %>
+        <div class="mt-4 pt-4 border-t border-blue-200">
+          <div class="text-sm text-gray-600 uppercase tracking-wide mb-2">Season Statistics</div>
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
+            <% stats = @team_records['130'][:record_stats] %>
+            <% if stats['pointsFor'] %>
+              <div class="text-center">
+                <div class="text-gray-500">Points For</div>
+                <div class="font-semibold"><%= stats['pointsFor'] %></div>
+              </div>
+            <% end %>
+            <% if stats['pointsAgainst'] %>
+              <div class="text-center">
+                <div class="text-gray-500">Points Against</div>
+                <div class="font-semibold"><%= stats['pointsAgainst'] %></div>
+              </div>
+            <% end %>
+            <% if stats['avgPointsFor'] %>
+              <div class="text-center">
+                <div class="text-gray-500">Avg Points For</div>
+                <div class="font-semibold"><%= stats['avgPointsFor'] %></div>
+              </div>
+            <% end %>
+            <% if stats['avgPointsAgainst'] %>
+              <div class="text-center">
+                <div class="text-gray-500">Avg Points Against</div>
+                <div class="font-semibold"><%= stats['avgPointsAgainst'] %></div>
+              </div>
+            <% end %>
+            <% if stats['winPercent'] %>
+              <div class="text-center">
+                <div class="text-gray-500">Win %</div>
+                <div class="font-semibold"><%= (stats['winPercent'] * 100).round(1) %>%</div>
+              </div>
+            <% end %>
+            <% if stats['gamesPlayed'] %>
+              <div class="text-center">
+                <div class="text-gray-500">Games Played</div>
+                <div class="font-semibold"><%= stats['gamesPlayed'] %></div>
+              </div>
+            <% end %>
+          </div>
+        </div>
+      <% end %>
+    </div>
+  <% end %>
+  
 </div>
 
 <div data-controller="game-filter" class="w-full max-w-screen-2xl mx-auto my-12 flex gap-6">
@@ -111,6 +188,41 @@
       <% end %>
     </div>
   </div>
+
+  <div class="border border-gray-200 rounded-lg">
+    <div class="pl-4 text-lg p-2 border-b border-gray-200">Big Ten Conference</div>
+    <div class="pl-4 text-[10px] uppercase p-2 bg-gray-50 border-b border-gray-200">Standings</div>
+    <div class="text-sm">
+      <% if @conference_standings && @conference_standings.any? %>
+        <% @conference_standings.sort_by { |team_id, standing_data| standing_data[:rank] }.each do |team_id, standing_data| %>
+          <div class="flex items-center p-3 border-b border-gray-200 gap-2">
+            <div class="text-blue-600 font-semibold">
+              #<%= standing_data[:rank] %>
+            </div>
+            <div class="font-medium flex items-center gap-2">
+              <%= image_tag team(team_id)[:logo], class: "h-6 w-6" %>
+              <%= team(team_id)[:name] %>
+            </div>
+            <div class="flex flex-col text-xs text-gray-600 ml-auto text-right">
+              <div class="font-semibold">
+                <%= standing_data[:conference_wins] %>-<%= standing_data[:conference_losses] %>
+              </div>
+              <div class="text-gray-500">
+                Conf
+              </div>
+            </div>
+          </div>
+        <% end %>
+      <% else %>
+        <div class="text-center py-8">
+          <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+          <p class="mt-2 text-gray-600">Loading standings...</p>
+        </div>
+      <% end %>
+    </div>
+  </div>
+
+  
 
   
 </div>
