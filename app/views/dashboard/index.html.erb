@@ -1,82 +1,96 @@
-<div class="w-full bg-blue-900 text-white text-center py-2">
-  Hello
-</div>
 <div data-controller="game-filter" class="w-full max-w-screen-2xl mx-auto my-12">
-  <!-- Filter Button -->
-  <div class="mb-6 text-center">
-    <button 
-      data-game-filter-target="button"
-      data-action="click->game-filter#toggle"
-      class="px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-lg shadow-md transition-colors duration-200"
-    >
-      Home Games Only
-    </button>
-  </div>
-  <div class="flex items-start gap-4">
-    <div class="flex flex-col items-center justify-center flex-auto">
-      <table class="w-full text-sm">
-        <thead class="">
-          <tr class="hidden md:table-row text-left text-sm">
-            <th class="px-2 border-b border-gray-200">Date</th>
-            <th class="px-2 border-b border-gray-200">Time</th>
-            <th class="px-2 border-b border-gray-200">Away</th>
-            <th class="px-2 border-b border-gray-200">Home</th>
-            <th class="px-2 border-b border-gray-200">Location</th>
-          </tr>
-        </thead>
-        <tbody>
-          <% @games.each do |game| %>          
-          <tr 
-            data-game-filter-target="gameRow"
-            data-home-team-id="<%= game['homeId'] %>"
-            class="text-center md:text-left w-full flex flex-col md:table-row border-b border-gray-200 even:bg-silver-100 p-2 <% if game['homeId'] == 130 %>bg-blue-50<% end %>"
-          >
-
-            <td class="p-2"><%= game["startDate"].strftime("%A, %B %d, %Y") %></td>
-            <td class="p-2">
-              <% if game["startTimeTBD"].to_s == 'true' || game["startDate"].strftime("%I:%M %p") == "12:00 AM" %>
-                <span class="text-gray-200">TBD</span>
+  <div class="border border-gray-200 rounded-lg w-auto mx-auto text mx-4">
+    <div class="pl-4 text-lg p-2 border-b border-gray-200">2025 Schedule</div>
+    <div class="pl-4 text-[10px] uppercase p-2 bg-gray-50 border-b border-gray-200">Regular Season</div>
+    <div class="text-sm">
+      <% if @games&.any? %>
+        <% @games.each do |game| %>
+          <div class="flex items-center p-3 border-b border-gray-200 gap-2">
+            <div class="text-blue-600 font-semibold text-lg">
+              <% if game['homeId'] == '130' %>
+                vs.
               <% else %>
-                <%= game["startDate"].strftime("%I:%M %p") %>
+                @
               <% end %>
-            </td>
-            <td class="p-2">
-              <div class="flex items-center justify-center md:justify-start">
-                <%= image_tag team(game["awayId"])[:logo], class: "h-10 w-10" %>
-                <span class="ml-2"><%= team(game["awayId"])[:name] %></span>
-              </div>
-            </td>
-            <td class="p-2">
-              <div class="flex items-center justify-center md:justify-start">
-                <span class="mr-2">@</span>
-                <%= image_tag team(game["homeId"])[:logo], class: "h-10 w-10" %>
-                <span class="ml-2"><%= team(game["homeId"])[:name] %></span>
-              </div>
-            </td>      
-            <td class="p-2"><%= game["venue"] %></td>
-          </tr>
-          <% end %>
-        </tbody>
-      </table>
-    </div>
-    <div class="w-full max-w-xs flex flex-col">
-      <h2 class="text-lg font-bold mb-4">AP Top 25 Rankings</h2>
-      <% if @fetch_rankings && @fetch_rankings.any? %>
-          <% @fetch_rankings.sort_by { |team_id, rank_data| rank_data[:current] }.each do |team_id, rank_data| %>
-            <div class="border-t border-gray-200 text-sm w-full gap-2 text-left flex items-center py-1 mb-0.5">
-              <span class="font-bold">#<%= rank_data[:current] %></span>
-              <% if rank_data[:previous] && rank_data[:previous] != 0 %>
-                <span class="text-gray-500 text-xs">#<%= rank_data[:previous] || "NR" %></span>
+            </div>
+            <div class="font-medium flex items-center gap-2">
+              <% if game['homeId'] == '130' %>
+                <%= image_tag team(game["awayId"])[:logo], class: "h-6 w-6" %>
+                <%= team(game['awayId'])[:name] %>
+              <% else %>
+                <%= image_tag team(game["homeId"])[:logo], class: "h-6 w-6" %>
+                <%= team(game['homeId'])[:name] %>
               <% end %>
-              <%= image_tag team(team_id)[:logo], class: "w-6 h-6" %>
+            </div>
+            <div class="flex flex-col text-xs text-gray-600 ml-auto text-right">
+              <div class="font-semibold">
+                <%= game['startDate'].strftime("%b %d") %>
+              </div>
               <div>
-                <p class="font-semibold"><%= team(team_id)[:name] %></p>
+                <% if game['startTimeTBD'].to_s == 'true' || game['startDate'].strftime("%I:%M %p") == "12:00 AM" %>
+                  <span class="text-gray-400">TBD</span>
+                <% else %>
+                  <%= game['startDate'].strftime("%I:%M %p") %>
+                <% end %>
+              </div>
+              <div class="text-gray-500">
+                  <% if game['broadcast'] %>
+                    <%= game['broadcast']['media'] %>
+                  <% end %>
               </div>
             </div>
-          <% end %>
+          </div>
+          
+        <% end %>
       <% else %>
-        <p class="text-gray-600">No rankings available</p>
+        <div class="text-center py-8">
+          <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+          <p class="mt-2 text-gray-600">Loading schedule...</p>
+        </div>
       <% end %>
     </div>
+  </div>
+
+  <div class="border border-gray-200 rounded-lg w-auto mx-auto text mx-4 mt-8">
+    <div class="pl-4 text-lg p-2 border-b border-gray-200">AP Top 25 Rankings</div>
+    <div class="pl-4 text-[10px] uppercase p-2 bg-gray-50 border-b border-gray-200">Current Week</div>
+    <div class="text-sm">
+      <% if @fetch_rankings && @fetch_rankings.any? %>
+        <% @fetch_rankings.sort_by { |team_id, rank_data| rank_data[:current] }.each do |team_id, rank_data| %>
+          <div class="flex items-center p-3 border-b border-gray-200 gap-2">
+            <div class="text-blue-600 font-semibold text-lg">
+              #<%= rank_data[:current] %>
+            </div>
+            <div class="font-medium flex items-center gap-2">
+              <%= image_tag team(team_id)[:logo], class: "h-6 w-6" %>
+              <%= team(team_id)[:name] %>
+            </div>
+            <div class="flex flex-col text-xs text-gray-600 ml-auto text-right">
+              <% if rank_data[:previous] && rank_data[:previous] != 0 %>
+                <div class="font-semibold">
+                  #<%= rank_data[:previous] %>
+                </div>
+                <div class="text-gray-500">
+                  Previous
+                </div>
+              <% else %>
+                <div class="font-semibold">
+                  NR
+                </div>
+                <div class="text-gray-500">
+                  Previous
+                </div>
+              <% end %>
+            </div>
+          </div>
+        <% end %>
+      <% else %>
+        <div class="text-center py-8">
+          <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+          <p class="mt-2 text-gray-600">Loading rankings...</p>
+        </div>
+      <% end %>
+    </div>
+  </div>
   </div>
 </div>
