@@ -17,6 +17,7 @@ class DashboardController < ApplicationController
     @teams_cache = @dashboard_data[:teams_cache]
     @team_records = @dashboard_data[:team_records]
     @conference_standings = @dashboard_data[:conference_standings]
+    @scoreboard = @dashboard_data[:scoreboard]
 
     load_time = Time.current - start_time
     Rails.logger.info "Dashboard loaded in #{load_time.round(2)} seconds"
@@ -116,21 +117,23 @@ class DashboardController < ApplicationController
 
     # Fetch team records and conference standings
     team_records = fetch_team_records
-    conference_standings = fetch_conference_standings
+
+    # Fetch scoreboard
+    scoreboard = fetch_scoreboard
 
     # Build teams cache to avoid N+1 queries
-    teams_cache = build_teams_cache(games, rankings)
+    teams_cache = build_teams_cache(games, rankings, scoreboard)
 
     {
       games: games,
       rankings: rankings,
       teams_cache: teams_cache,
       team_records: team_records,
-      conference_standings: conference_standings
+      scoreboard: scoreboard
     }
   end
 
-  def build_teams_cache(games, rankings)
+  def build_teams_cache(games, rankings, scoreboard = [])
     # Collect all unique team IDs
     team_ids = Set.new
 
@@ -142,6 +145,12 @@ class DashboardController < ApplicationController
 
     # Add team IDs from rankings
     rankings.keys.each { |team_id| team_ids.add(team_id) }
+
+    # Add team IDs from scoreboard
+    scoreboard.each do |game|
+      team_ids.add(game["homeId"]) if game["homeId"]
+      team_ids.add(game["awayId"]) if game["awayId"]
+    end
 
     # Fetch all teams data in parallel (if possible) or batch
     teams_cache = {}
@@ -283,43 +292,151 @@ class DashboardController < ApplicationController
     end
   end
 
-  def fetch_conference_standings
-    # Cache conference standings for 30 minutes
-    Rails.cache.fetch("conference_standings", expires_in: 30.minutes) do
+  def fetch_scoreboard
+    # Cache scoreboard for 5 minutes
+    Rails.cache.fetch("scoreboard", expires_in: 5.minutes) do
       begin
-        Rails.logger.info "Fetching conference standings from ESPN API..."
-
-        # Fetch Big Ten standings (conference ID for Big Ten is typically 4)
+        Rails.logger.info "Fetching scoreboard from ESPN API..."
         response = HTTParty.get(
-          "https://site.api.espn.com/apis/site/v2/sports/football/college-football/standings?season=2025&seasontype=2&group=4",
+          "https://site.api.espn.com/apis/site/v2/sports/football/college-football/scoreboard",
           timeout: 10
         )
+        Rails.logger.info "Scoreboard response status: #{response.code}"
+        Rails.logger.info "Scoreboard response body length: #{response.body.length}"
+
         data = JSON.parse(response.body)
+        Rails.logger.info "Scoreboard data keys: #{data.keys}"
 
-        standings = {}
+        events = data["events"] || []
+        Rails.logger.info "Found #{events.length} events in scoreboard"
 
-        if data["groups"]&.first && data["groups"].first["standings"]
-          data["groups"].first["standings"].each do |standing|
-            team_id = standing.dig("team", "id")
-            if team_id
-              standings[team_id] = {
-                rank: standing["rank"],
-                wins: standing["stats"].find { |s| s["name"] == "wins" }&.dig("value") || 0,
-                losses: standing["stats"].find { |s| s["name"] == "losses" }&.dig("value") || 0,
-                conference_wins: standing["stats"].find { |s| s["name"] == "conferenceWins" }&.dig("value") || 0,
-                conference_losses: standing["stats"].find { |s| s["name"] == "conferenceLosses" }&.dig("value") || 0
-              }
+        # Filter for games with ranked teams (top 25 only)
+        ranked_games = events.select do |event|
+          if event["competitions"]&.first&.dig("competitors")
+            competitors = event["competitions"].first["competitors"]
+            # Check if any competitor is ranked in the top 25 using curatedRank.current
+            competitors.any? do |competitor|
+              curated_rank = competitor.dig("curatedRank", "current")
+              # Team is ranked if curatedRank.current exists and is between 1 and 25
+              curated_rank && curated_rank > 0 && curated_rank <= 25
             end
+          else
+            false
           end
         end
 
-        standings
+        Rails.logger.info "Found #{ranked_games.length} games with potential ranked teams"
+
+        # Transform the data to match our expected format
+        transformed_games = ranked_games.map do |event|
+          game = {
+            "id" => event["id"],
+            "name" => event["name"],
+            "shortName" => event["shortName"],
+            "week" => event.dig("week", "text"),
+            "season" => event.dig("season", "displayName"),
+            "seasonType" => event.dig("seasonType", "name")
+          }
+
+          # Handle date/time from ESPN API
+          if event["date"].present?
+            utc_time = DateTime.parse(event["date"])
+            est_time = utc_time.in_time_zone("Eastern Time (US & Canada)")
+            game["startDate"] = est_time
+            game["date"] = event["date"]
+          end
+
+          # Extract competition details
+          if event["competitions"]&.first
+            competition = event["competitions"].first
+
+            # Extract venue information
+            if competition["venue"] && competition["venue"]["address"]
+              venue = competition["venue"]
+              address = venue["address"]
+              if venue["fullName"] && address["city"] && address["state"]
+                game["venue"] = "#{venue["fullName"]}, #{address["city"]}, #{address["state"]}"
+              end
+            end
+
+            # Extract team information
+            if competition["competitors"]
+              game["competitors"] = competition["competitors"].map do |competitor|
+                if competitor["team"]
+                  {
+                    "id" => competitor["team"]["id"],
+                    "name" => competitor["team"]["displayName"],
+                    "abbreviation" => competitor["team"]["abbreviation"],
+                    "homeAway" => competitor["homeAway"],
+                    "logo" => competitor["team"]["logos"]&.first&.dig("href"),
+                    "curatedRank" => competitor["curatedRank"]
+                  }
+                else
+                  nil
+                end
+              end.compact
+
+              # Set homeId and awayId for compatibility with the view
+              home_competitor = competition["competitors"].find { |c| c["homeAway"] == "home" && c["team"] }
+              away_competitor = competition["competitors"].find { |c| c["homeAway"] == "away" && c["team"] }
+
+              game["homeId"] = home_competitor["team"]["id"] if home_competitor
+              game["awayId"] = away_competitor["team"]["id"] if away_competitor
+            end
+
+            # Extract broadcast information
+            if competition["broadcasts"]&.first
+              broadcast = competition["broadcasts"].first
+              if broadcast["names"] && broadcast["names"].any?
+                game["broadcast"] = {
+                  "media" => broadcast["names"].join(", ")
+                }
+              end
+            end
+
+            # Extract status information
+            if competition["status"]
+              game["status"] = {
+                "type" => competition["status"]["type"]["name"],
+                "description" => competition["status"]["type"]["description"],
+                "detail" => competition["status"]["type"]["detail"],
+                "period" => competition["status"]["period"],
+                "clock" => competition["status"]["clock"],
+                "displayClock" => competition["status"]["displayClock"]
+              }
+            end
+
+            # Extract scores
+            if competition["competitors"]
+              game["scores"] = {}
+              competition["competitors"].each do |competitor|
+                if competitor["team"] && competitor["score"]
+                  team_id = competitor["team"]["id"]
+                  game["scores"][team_id] = {
+                    "score" => competitor["score"],
+                    "homeAway" => competitor["homeAway"]
+                  }
+                end
+              end
+            end
+          end
+
+                    game
+        end
+
+
+
+        Rails.logger.info "Final scoreboard result: #{transformed_games.length} games"
+        transformed_games
       rescue => e
-        Rails.logger.error "Failed to fetch conference standings: #{e.message}"
-        {}
+        Rails.logger.error "Failed to fetch scoreboard: #{e.message}"
+        Rails.logger.error "Backtrace: #{e.backtrace.first(5)}"
+        []
       end
     end
   end
+
+
 
   def team(team_id)
     # Use the cached teams data instead of making API calls
