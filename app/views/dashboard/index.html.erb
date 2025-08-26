@@ -1,7 +1,7 @@
 <div class="w-full p-8">
-  <div class="flex items-center gap-2">
+  <div class="flex flex-col md:flex-row items-center gap-2">
     <%= image_tag team(130)[:logo], class: "h-24 w-24" %>
-    <div class="text-4xl uppercase tracking-wide flex items-center gap-1">
+    <div class="text-xl md:text-4xl uppercase tracking-wide flex items-center gap-1">
       <% if @fetch_rankings && @fetch_rankings['130'] %>
         <span class="text-gray-500 text-base ml-2">#<%= @fetch_rankings['130'][:current] %></span>
       <% end %>
@@ -193,8 +193,8 @@
 <!-- This Week's Scoreboard Section -->
 <div class="w-full max-w-screen-2xl mx-auto my-12">
   <div class="border border-gray-200 rounded-lg">
-    <div class="pl-4 text-lg p-2 border-b border-gray-200">This Week's Scoreboard</div>
-    <div class="pl-4 text-[10px] uppercase p-2 bg-gray-50 border-b border-gray-200">Ranked Teams Only</div>
+    <div class="pl-4 text-sm sm:text-lg p-2 border-b border-gray-200">This Week's Scoreboard</div>
+    <div class="pl-4 text-[8px] sm:text-[10px] uppercase p-2 bg-gray-50 border-b border-gray-200">Ranked Teams Only</div>
     <div class="text-sm">
       <% if @scoreboard&.any? %>
         <% ranked_games = @scoreboard %>
@@ -203,23 +203,23 @@
           <% ranked_games.each do |game| %>
             <div class="flex items-center p-3 border-b border-gray-200 gap-4">
               <!-- Away Team (Left) -->
-              <div class="font-medium flex items-center gap-2 flex-1 justify-start">
+              <div class="font-medium flex flex-col sm:flex-row items-center gap-1 sm:gap-2 flex-1 justify-start">
                 <% if team(game["awayId"])[:logo] %>
-                  <%= image_tag team(game["awayId"])[:logo], class: "h-6 w-6" %>
+                  <%= image_tag team(game["awayId"])[:logo], class: "h-5 w-5 sm:h-6 sm:w-6" %>
                 <% end %>
-                <div class="flex items-center gap-1">
+                <div class="flex flex-col sm:flex-row items-center gap-1">
                   <% away_competitor = game['competitors']&.find { |c| c['homeAway'] == 'away' } %>
                   <% if away_competitor && away_competitor['curatedRank'] && away_competitor['curatedRank']['current'] && away_competitor['curatedRank']['current'] != 99 %>
                     <span class="text-gray-400 text-xs">#<%= away_competitor['curatedRank']['current'] %></span>
                   <% end %>
-                  <%= team(game['awayId'])[:name] %>
+                  <span class="text-sm sm:text-base text-center"><%= team(game['awayId'])[:name] %></span>
                 </div>
               </div>
               
               <!-- Center: Score and Game Info -->
               <div class="flex flex-col items-center text-center flex-1">
                 <!-- Score -->
-                <div class="text-blue-600 font-semibold text-lg mb-1">
+                <div class="text-blue-600 font-semibold text-base sm:text-lg mb-1">
                   <% if game['status'] && game['scores'] %>
                     <% home_score = game['scores'][game['homeId']]&.dig('score') %>
                     <% away_score = game['scores'][game['awayId']]&.dig('score') %>
@@ -233,15 +233,15 @@
                       <% game_final = status_type == 'STATUS_FINAL' %>
                       
                       <div class="text-center flex items-center gap-1">
-                        <div class="text-sm font-bold <%= 'text-green-600' if game_final && away_winning %>"><%= away_score %></div>
+                        <div class="text-xs sm:text-sm font-bold <%= 'text-green-600' if game_final && away_winning %>"><%= away_score %></div>
                         <div class="text-xs text-gray-500">-</div>
-                        <div class="text-sm font-bold <%= 'text-green-600' if game_final && home_winning %>"><%= home_score %></div>
+                        <div class="text-xs sm:text-sm font-bold <%= 'text-green-600' if game_final && home_winning %>"><%= home_score %></div>
                       </div>
                     <% else %>
-                      VS
+                      <span class="text-sm sm:text-base">VS</span>
                     <% end %>
                   <% else %>
-                    VS
+                    <span class="text-sm sm:text-base">VS</span>
                   <% end %>
                 </div>
                 
@@ -252,7 +252,7 @@
                     <% if status_type == 'STATUS_SCHEDULED' %>
                       <!-- Scheduled Game -->
                       <% if game['startDate'] %>
-                        <div class="font-semibold">
+                        <div class="font-semibold text-xs sm:text-sm">
                           <%= game['startDate'].strftime("%b %d") %>
                           <% if game['startTimeTBD'].to_s == 'true' || game['startDate'].strftime("%I:%M %p") == "12:00 AM" %>
                             <span class="text-gray-400"> TBD</span>
@@ -261,12 +261,12 @@
                           <% end %>
                         </div>
                       <% else %>
-                        <div class="font-semibold"><span class="text-gray-400">TBD</span></div>
+                        <div class="font-semibold text-xs sm:text-sm"><span class="text-gray-400">TBD</span></div>
                       <% end %>
                     <% elsif status_type == 'STATUS_IN_PROGRESS' %>
                       <!-- Live Game -->
-                      <div class="font-semibold text-green-600">LIVE</div>
-                      <div class="text-green-600">
+                      <div class="font-semibold text-green-600 text-xs sm:text-sm">LIVE</div>
+                      <div class="text-green-600 text-xs sm:text-sm">
                         <% if game['status']['displayClock'] %>
                           <%= game['status']['displayClock'] %>
                         <% elsif game['status']['period'] %>
@@ -277,22 +277,22 @@
                       </div>
                     <% elsif status_type == 'STATUS_FINAL' %>
                       <!-- Final Game -->
-                      <div class="text-gray-500">
+                      <div class="text-gray-500 text-xs sm:text-sm">
                         <%= game['status']['detail']&.split(' - ')&.last || 'Final' %>
                       </div>
                     <% else %>
                       <!-- Other Status -->
-                      <div class="font-semibold">
+                      <div class="font-semibold text-xs sm:text-sm">
                         <%= game['status']['description'] || 'TBD' %>
                       </div>
-                      <div class="text-gray-500">
+                      <div class="text-gray-500 text-xs sm:text-sm">
                         <%= game['status']['detail'] || '' %>
                       </div>
                     <% end %>
                   <% else %>
                     <!-- No Status - Show Scheduled Time -->
                     <% if game['startDate'] %>
-                      <div class="font-semibold">
+                      <div class="font-semibold text-xs sm:text-sm">
                         <%= game['startDate'].strftime("%b %d") %>
                         <% if game['startTimeTBD'].to_s == 'true' || game['startDate'].strftime("%I:%M %p") == "12:00 AM" %>
                           <span class="text-gray-400"> TBD</span>
@@ -301,7 +301,7 @@
                         <% end %>
                       </div>
                     <% else %>
-                      <div class="font-semibold"><span class="text-gray-400">TBD</span></div>
+                      <div class="font-semibold text-xs sm:text-sm"><span class="text-gray-400">TBD</span></div>
                     <% end %>
                   <% end %>
                 </div>
@@ -315,16 +315,16 @@
               </div>
               
               <!-- Home Team (Right) -->
-              <div class="font-medium flex items-center gap-2 flex-1 justify-end">
-                <div class="flex items-center gap-1">
+              <div class="font-medium flex flex-col sm:flex-row items-center gap-1 sm:gap-2 flex-1 justify-end">
+                <div class="flex flex-col sm:flex-row items-center gap-1">
                   <% home_competitor = game['competitors']&.find { |c| c['homeAway'] == 'home' } %>
                   <% if home_competitor && home_competitor['curatedRank'] && home_competitor['curatedRank']['current'] && home_competitor['curatedRank']['current'] != 99 %>
                     <span class="text-gray-400 text-xs">#<%= home_competitor['curatedRank']['current'] %></span>
                   <% end %>
-                  <%= team(game['homeId'])[:name] %>
+                  <span class="text-sm sm:text-base text-center"><%= team(game['homeId'])[:name] %></span>
                 </div>
                 <% if team(game["homeId"])[:logo] %>
-                  <%= image_tag team(game["homeId"])[:logo], class: "h-6 w-6" %>
+                  <%= image_tag team(game["homeId"])[:logo], class: "h-5 w-5 sm:h-6 sm:w-6" %>
                 <% end %>
               </div>
             </div>
