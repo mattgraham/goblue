@@ -91,52 +91,121 @@
     <div class="text-sm">
       <% if @games&.any? %>
         <% @games.each do |game| %>
-          <div class="flex items-center p-3 border-b border-gray-200 gap-2 <%= game['homeId'] == '130' ? 'bg-blue-950 text-white' : '' %>"> 
-            <div class="text-blue-500 font-semibold text-lg">
-              <% if game['homeId'] == '130' %>
-                vs.
-              <% else %>
-                @
-              <% end %>
-            </div>
-            <div class="font-medium flex items-center gap-2 mr-2">
-              <% if game['homeId'] == '130' %>
-                <%= image_tag team(game["awayId"])[:logo], class: "h-6 w-6" %>
-                <div>
-                  <% if @fetch_rankings && @fetch_rankings[game['awayId']] %>
-                    <span class="<%= game['homeId'] == '130' ? 'text-white/50' : 'text-gray-400' %> text-xs"><%= @fetch_rankings[game['awayId']][:current] %></span>
-                  <% end %>
-                  <%= team(game['awayId'])[:name] %>
+          <div class="border-b border-gray-200 last:border-b-0">
+            <!-- Game Header with Date and Time -->
+            <div class="bg-gray-50 px-4 py-2 border-b border-gray-200">
+              <div class="flex items-center justify-between">
+                <div class="text-sm font-semibold text-gray-700">
+                  <%= game['startDate'].strftime("%A, %B %d, %Y") %>
                 </div>
-              <% else %>
-                <%= image_tag team(game["homeId"])[:logo], class: "h-6 w-6" %>
-                <div>
-                  <% if @fetch_rankings && @fetch_rankings[game['homeId']] %>
-                    <span class="text-gray-400 text-xs"><%= @fetch_rankings[game['homeId']][:current] %></span>
+                <div class="text-sm text-gray-600">
+                  <% if game['startTimeTBD'].to_s == 'true' || game['startDate'].strftime("%I:%M %p") == "12:00 AM" %>
+                    <span class="text-gray-400">TBD</span>
+                  <% else %>
+                    <%= game['startDate'].strftime("%I:%M %p") %>
                   <% end %>
-                  <%= team(game['homeId'])[:name] %>
                 </div>
-              <% end %>
+              </div>
             </div>
-            <div class="flex flex-col text-xs <%= game['homeId'] == '130' ? 'text-white' : 'text-gray-600' %> ml-auto text-right">
-              <div class="font-semibold">
-                <%= game['startDate'].strftime("%b %d") %>
+            
+            <!-- Main Game Content -->
+            <div class="p-4">
+              <!-- Debug: Game data: <%= game.inspect %> -->
+              <!-- Teams Section -->
+              <div class="flex items-center justify-between mb-4">
+                <!-- Away Team -->
+                <div class="flex items-center gap-3 flex-1">
+                  <%= image_tag team(game["awayId"])[:logo], class: "h-8 w-8" %>
+                  <div class="flex flex-col">
+                    <div class="flex items-center gap-2">
+                      <% if @fetch_rankings && @fetch_rankings[game['awayId']] %>
+                        <span class="text-gray-500 text-sm">#<%= @fetch_rankings[game['awayId']][:current] %></span>
+                      <% end %>
+                      <span class="font-semibold text-base"><%= team(game['awayId'])[:name] %></span>
+                    </div>
+                    <span class="text-xs text-gray-500">(0-0)</span>
+                  </div>
+                </div>
+                
+                <!-- VS -->
+                <div class="mx-4 text-gray-400 font-semibold">VS</div>
+                
+                <!-- Home Team -->
+                <div class="flex items-center gap-3 flex-1 justify-end">
+                  <div class="flex flex-col items-end">
+                    <div class="flex items-center gap-2">
+                      <span class="font-semibold text-base"><%= team(game['homeId'])[:name] %></span>
+                      <% if @fetch_rankings && @fetch_rankings[game['homeId']] %>
+                        <span class="text-gray-500 text-sm">#<%= @fetch_rankings[game['homeId']][:current] %></span>
+                      <% end %>
+                    </div>
+                    <span class="text-xs text-gray-500">(0-0)</span>
+                  </div>
+                  <%= image_tag team(game["homeId"])[:logo], class: "h-8 w-8" %>
+                </div>
               </div>
-              <div>
-                <% if game['startTimeTBD'].to_s == 'true' || game['startDate'].strftime("%I:%M %p") == "12:00 AM" %>
-                  <span class="<%= game['homeId'] == '130' ? 'text-white/50' : 'text-gray-400' %>">TBD</span>
-                <% else %>
-                  <%= game['startDate'].strftime("%I:%M %p") %>
-                <% end %>
-              </div>
-              <div class="<%= game['homeId'] == '130' ? 'text-white' : 'text-gray-500' %>">
+              
+              <!-- Game Details -->
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <!-- Venue and Weather -->
+                <div class="space-y-2">
+                  <% if game['venue'] %>
+                    <div class="flex items-center gap-2 text-sm">
+                      <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                      </svg>
+                      <span class="text-gray-700"><%= game['venue'] %></span>
+                    </div>
+                  <% end %>
+                  
+                  <!-- Weather -->
+                  <% if game['weather'] && game['weather']['temperature'] != 'N/A' %>
+                    <div class="flex items-center gap-2 text-sm">
+                        <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"></path>
+                        </svg>
+                        <span class="text-gray-700"><%= game['weather']['temperature'] %>° <%= game['weather']['displayValue'] %></span>
+                      </div>
+                  <% end %>
+                </div>
+                
+                <!-- Broadcast and Tickets -->
+                <div class="space-y-2">
                   <% if game['broadcast'] %>
-                    <%= game['broadcast']['media'] %>
+                    <div class="flex items-center gap-2 text-sm">
+                      <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 002 2v8a2 2 0 002 2z"></path>
+                      </svg>
+                      <span class="text-gray-700"><%= game['broadcast']['media'] %></span>
+                    </div>
                   <% end %>
+                </div>
               </div>
+              
+              <!-- Betting Odds -->
+              <% if game['odds'] && game['odds']['spread'] != 'N/A' %>
+                <!-- Debug: <%= game['odds'].inspect %> -->
+                <div class="bg-gray-50 p-3 rounded-lg mb-4">
+                  <div class="flex items-center justify-between text-sm">
+                    <div class="flex items-center gap-2">
+                      <span class="text-gray-600"><%= game['odds']['provider'] %></span>
+                    </div>
+                    <div class="flex items-center gap-4">
+                      <div class="text-center">
+                        <div class="text-gray-500 text-xs">Spread</div>
+                        <div class="font-semibold"><%= game['odds']['spread'] %></div>
+                      </div>
+                      <div class="text-center">
+                        <div class="text-gray-500 text-xs">Total</div>
+                        <div class="font-semibold"><%= game['odds']['total'] %></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              <% end %>
             </div>
           </div>
-          
         <% end %>
       <% else %>
         <div class="text-center py-8">
