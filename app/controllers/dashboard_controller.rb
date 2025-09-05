@@ -1,3 +1,5 @@
+require_relative '../services/api_cache_service'
+
 class DashboardController < ApplicationController
   # Only allow modern browsers supporting webp images, web push, badges, import maps, CSS nesting, and CSS :has.
   allow_browser versions: :modern
@@ -27,12 +29,17 @@ class DashboardController < ApplicationController
   private
 
   def fetch_dashboard_data
-    # Fetch games data with timeout
-    response = HTTParty.get(
-      "https://site.api.espn.com/apis/site/v2/sports/football/college-football/teams/Michigan/schedule?season=2025&seasontype=2",
-      timeout: 10
-    )
-    data = JSON.parse(response.body)
+    # Use cached data if available, otherwise fetch from API
+    data = ApiCacheService.get_cached_data(:michigan_schedule)
+    
+    unless data
+      Rails.logger.warn "No cached Michigan schedule data found, fetching from API..."
+      response = HTTParty.get(
+        "https://site.api.espn.com/apis/site/v2/sports/football/college-football/teams/Michigan/schedule?season=2025&seasontype=2",
+        timeout: 10
+      )
+      data = JSON.parse(response.body)
+    end
 
     # Extract events from the ESPN API response
     events = data["events"] || []
@@ -121,15 +128,27 @@ class DashboardController < ApplicationController
       Rails.logger.info "Game #{game['name']} is in week #{game['weekNumber']}, current week is #{current_week}"
       Rails.logger.info "Game teams: #{game['awayId']} vs #{game['homeId']}"
       
-      # Fetch odds for all games
+      # Fetch odds for all games (use cached data if available)
       Rails.logger.info "Fetching odds for game: #{game['name']}"
-      game["odds"] = fetch_game_odds(game["awayId"], game["homeId"])
-      Rails.logger.info "Odds result: #{game['odds'].inspect}"
+      cached_odds = ApiCacheService.get_cached_game_odds(game["awayId"], game["homeId"])
+      if cached_odds
+        game["odds"] = format_odds_data(cached_odds)
+        Rails.logger.info "Using cached odds: #{game['odds'].inspect}"
+      else
+        game["odds"] = fetch_game_odds(game["awayId"], game["homeId"])
+        Rails.logger.info "Fetched fresh odds: #{game['odds'].inspect}"
+      end
       
-      # Fetch weather for all games
+      # Fetch weather for all games (use cached data if available)
       Rails.logger.info "Fetching weather for game: #{game['name']}"
-      game["weather"] = fetch_game_weather(game["awayId"], game["homeId"])
-      Rails.logger.info "Weather result: #{game['weather'].inspect}"
+      cached_weather = ApiCacheService.get_cached_game_weather(game["awayId"], game["homeId"])
+      if cached_weather
+        game["weather"] = cached_weather
+        Rails.logger.info "Using cached weather: #{game['weather'].inspect}"
+      else
+        game["weather"] = fetch_game_weather(game["awayId"], game["homeId"])
+        Rails.logger.info "Fetched fresh weather: #{game['weather'].inspect}"
+      end
     end
 
     # Fetch rankings
@@ -466,40 +485,46 @@ class DashboardController < ApplicationController
   end
 
   def fetch_team_data(team_id)
-    # Cache individual team data for 1 hour
-    Rails.cache.fetch("team_data_#{team_id}", expires_in: 1.hour) do
+    # Use cached data if available, otherwise fetch from API
+    data = ApiCacheService.get_cached_team_data(team_id)
+    
+    unless data
+      Rails.logger.warn "No cached team data found for team #{team_id}, fetching from API..."
       response = HTTParty.get(
         "https://site.api.espn.com/apis/site/v2/sports/football/college-football/teams/#{team_id}",
         timeout: 5
       )
       data = JSON.parse(response.body)
-      team_data = data["team"]
-
-      # Handle case where team_data might be nil
-      return { logo: nil, name: "Unknown Team", color: nil, abbreviation: nil } unless team_data
-
-      {
-        logo: team_data.dig("logos", 0, "href"),
-        name: team_data["displayName"],
-        color: team_data["color"],
-        abbreviation: team_data["abbreviation"]
-      }
     end
+    
+    team_data = data["team"]
+
+    # Handle case where team_data might be nil
+    return { logo: nil, name: "Unknown Team", color: nil, abbreviation: nil } unless team_data
+
+    {
+      logo: team_data.dig("logos", 0, "href"),
+      name: team_data["displayName"],
+      color: team_data["color"],
+      abbreviation: team_data["abbreviation"]
+    }
   end
 
   def fetch_rankings
-    # Cache rankings for 30 minutes
-    Rails.cache.fetch("ap_rankings", expires_in: 30.minutes) do
-      begin
-        Rails.logger.info "Fetching AP Top 25 rankings from ESPN API..."
-        response = HTTParty.get(
-          "http://site.api.espn.com/apis/site/v2/sports/football/college-football/rankings?week=1&seasonType=2&rankings=1",
-          timeout: 10
-        )
-        Rails.logger.info "Response status: #{response.code}"
-        Rails.logger.info "Response body length: #{response.body.length}"
+    # Use cached data if available, otherwise fetch from API
+    data = ApiCacheService.get_cached_data(:ap_rankings)
+    
+    unless data
+      Rails.logger.warn "No cached rankings data found, fetching from API..."
+      response = HTTParty.get(
+        "http://site.api.espn.com/apis/site/v2/sports/football/college-football/rankings?week=1&seasonType=2&rankings=1",
+        timeout: 10
+      )
+      Rails.logger.info "Response status: #{response.code}"
+      Rails.logger.info "Response body length: #{response.body.length}"
 
-        data = JSON.parse(response.body)
+      data = JSON.parse(response.body)
+    end
         Rails.logger.info "Parsed data keys: #{data.keys}"
 
         # Debug available rankings
@@ -535,29 +560,27 @@ class DashboardController < ApplicationController
           end
         end
 
-        Rails.logger.info "Final rankings hash: #{rankings_hash}"
-        rankings_hash
-      rescue => e
-        Rails.logger.error "Failed to fetch rankings: #{e.message}"
-        Rails.logger.error "Backtrace: #{e.backtrace.first(5)}"
-        # Return empty hash if rankings fetch fails
-        {}
-      end
-    end
+    Rails.logger.info "Final rankings hash: #{rankings_hash}"
+    rankings_hash
+  rescue => e
+    Rails.logger.error "Failed to process rankings data: #{e.message}"
+    Rails.logger.error "Backtrace: #{e.backtrace.first(5)}"
+    # Return empty hash if rankings processing fails
+    {}
   end
 
   def fetch_team_records
-    # Cache team records for 30 minutes
-    Rails.cache.fetch("team_records", expires_in: 30.minutes) do
-      begin
-        Rails.logger.info "Fetching team records from ESPN API..."
-
-        # Fetch Michigan's team data which includes record and standingSummary
-        response = HTTParty.get(
-          "https://site.api.espn.com/apis/site/v2/sports/football/college-football/teams/130",
-          timeout: 10
-        )
-        data = JSON.parse(response.body)
+    # Use cached data if available, otherwise fetch from API
+    data = ApiCacheService.get_cached_data(:michigan_team)
+    
+    unless data
+      Rails.logger.warn "No cached Michigan team data found, fetching from API..."
+      response = HTTParty.get(
+        "https://site.api.espn.com/apis/site/v2/sports/football/college-football/teams/130",
+        timeout: 10
+      )
+      data = JSON.parse(response.body)
+    end
         team_data = data["team"]
 
                 if team_data
@@ -587,28 +610,28 @@ class DashboardController < ApplicationController
             }
           }
                 else
-          { "130" => { overall: "N/A", conference: "N/A", standing_summary: "N/A", record_stats: {}, summary: "N/A" } }
-                end
-      rescue => e
-        Rails.logger.error "Failed to fetch team records: #{e.message}"
         { "130" => { overall: "N/A", conference: "N/A", standing_summary: "N/A", record_stats: {}, summary: "N/A" } }
-      end
     end
+  rescue => e
+    Rails.logger.error "Failed to process team records data: #{e.message}"
+    { "130" => { overall: "N/A", conference: "N/A", standing_summary: "N/A", record_stats: {}, summary: "N/A" } }
   end
 
   def fetch_scoreboard
-    # Cache scoreboard for 5 minutes
-    Rails.cache.fetch("scoreboard", expires_in: 5.minutes) do
-      begin
-        Rails.logger.info "Fetching scoreboard from ESPN API..."
-        response = HTTParty.get(
-          "https://site.api.espn.com/apis/site/v2/sports/football/college-football/scoreboard",
-          timeout: 10
-        )
-        Rails.logger.info "Scoreboard response status: #{response.code}"
-        Rails.logger.info "Scoreboard response body length: #{response.body.length}"
+    # Use cached data if available, otherwise fetch from API
+    data = ApiCacheService.get_cached_data(:scoreboard)
+    
+    unless data
+      Rails.logger.warn "No cached scoreboard data found, fetching from API..."
+      response = HTTParty.get(
+        "https://site.api.espn.com/apis/site/v2/sports/football/college-football/scoreboard",
+        timeout: 10
+      )
+      Rails.logger.info "Scoreboard response status: #{response.code}"
+      Rails.logger.info "Scoreboard response body length: #{response.body.length}"
 
-        data = JSON.parse(response.body)
+      data = JSON.parse(response.body)
+    end
         Rails.logger.info "Scoreboard data keys: #{data.keys}"
 
         events = data["events"] || []
@@ -730,14 +753,12 @@ class DashboardController < ApplicationController
 
 
 
-        Rails.logger.info "Final scoreboard result: #{transformed_games.length} games"
-        transformed_games
-      rescue => e
-        Rails.logger.error "Failed to fetch scoreboard: #{e.message}"
-        Rails.logger.error "Backtrace: #{e.backtrace.first(5)}"
-        []
-      end
-    end
+    Rails.logger.info "Final scoreboard result: #{transformed_games.length} games"
+    transformed_games
+  rescue => e
+    Rails.logger.error "Failed to process scoreboard data: #{e.message}"
+    Rails.logger.error "Backtrace: #{e.backtrace.first(5)}"
+    []
   end
 
 
@@ -745,6 +766,51 @@ class DashboardController < ApplicationController
   def team(team_id)
     # Use the cached teams data instead of making API calls
     @teams_cache[team_id] || fetch_team_data(team_id)
+  end
+
+  def format_odds_data(odds_data)
+    # Format cached odds data to match the expected structure
+    # odds_data can be either an array or a hash depending on the source
+    
+    if odds_data.is_a?(Array) && odds_data.any?
+      # Handle array format (from pickcenter)
+      first_odds = odds_data.first
+      provider = first_odds["provider"]["name"]
+      spread_details = first_odds["details"]
+      over_under = first_odds["overUnder"]
+
+      {
+        "spread" => spread_details || "N/A",
+        "total" => over_under || "N/A",
+        "provider" => provider
+      }
+    elsif odds_data.is_a?(Hash)
+      # Handle hash format (from scoreboard)
+      if odds_data["odds"] && odds_data["odds"].any?
+        provider = odds_data["odds"].first["provider"]["name"]
+        spread_details = odds_data["details"]
+        over_under = odds_data["overUnder"]
+
+        {
+          "spread" => spread_details || "N/A",
+          "total" => over_under || "N/A",
+          "provider" => provider
+        }
+      else
+        {
+          "spread" => odds_data["details"] || "N/A",
+          "total" => odds_data["overUnder"] || "N/A",
+          "provider" => "ESPN BET"
+        }
+      end
+    else
+      # Fallback
+      {
+        "spread" => "N/A",
+        "total" => "N/A",
+        "provider" => "ESPN BET"
+      }
+    end
   end
 
   # Debug method to test odds fetching
