@@ -86,137 +86,224 @@
 
 <div data-controller="game-filter" class="w-full max-w-screen-2xl mx-auto my-12 grid grid-cols-1 md:grid-cols-2 gap-6 md:p-6">
   <div class="border border-gray-200 rounded-3xl bg-white">
-    <div class="pl-4 text-lg p-2 border-b border-gray-200">2025 Schedule</div>
-    <div class="text-sm">
+    <div class="flex items-center justify-between border-b border-gray-200 py-4 px-6">
+      <div class="text-xl font-bold">2025 Schedule</div>
+      <div class="flex items-center gap-2">
+        <span class="text-sm text-gray-600">Regular Season</span>
+        <select class="text-sm border border-gray-300 rounded px-2 py-1">
+          <option>2025</option>
+        </select>
+      </div>
+    </div>
+    
       <% if @games&.any? %>
+          <!-- Desktop Table View -->
+          <div class="hidden lg:block">
+            <table class="w-full text-sm">
+              <thead>
+                <tr class="bg-gray-50 text-xs font-semibold text-gray-600 uppercase tracking-wide border-b border-gray-200">
+                  <th class="px-6 py-3 text-left w-1/6">Date</th>
+                  <th class="px-6 py-3 text-left w-1/3">Opponent</th>
+                  <th class="px-6 py-3 text-left w-1/6">Time</th>
+                  <th class="px-6 py-3 text-left w-1/12">TV</th>
+                  <th class="px-6 py-3 text-left w-1/6">Result</th>
+                </tr>
+              </thead>
+              <tbody>
         <% @games.each do |game| %>
-          <div class="border-b border-gray-200 last:border-b-0">
-            <!-- Game Header with Date and Time -->
-            <div class="bg-gray-50 px-4 py-2 border-b border-gray-200">
-              <div class="flex items-center justify-between">
-                <div class="text-sm font-semibold text-gray-700">
-                  <%= game['startDate'].strftime("%A, %B %d, %Y") %>
+                  <tr class="border-b border-gray-100 last:border-b-0 hover:bg-gray-50 <%= 'opacity-70' if game['startDate'].to_date < Date.current %>">
+                    <!-- Date -->
+                    <td class="px-6 py-4">
+                      <div class="font-medium text-gray-900">
+                        <%= game['startDate'].strftime("%a, %b %d") %>
+                      </div>
+                    </td>
+
+                    <!-- Opponent -->
+                    <td class="px-6 py-4">
+                      <div class="flex items-center gap-2">
+                        <% if game['homeId'] == '130' %>
+                          <!-- Michigan is home, show away team as opponent -->
+                          <%= image_tag team(game["awayId"])[:logo], class: "h-6 w-6" %>
+                          <div class="flex items-center gap-1">
+                            <% if @fetch_rankings && @fetch_rankings[game['awayId']] %>
+                              <span class="text-gray-500 text-xs">#<%= @fetch_rankings[game['awayId']][:current] %></span>
+                            <% end %>
+                            <span class="font-medium">vs <%= team(game['awayId'])[:name] %></span>
+                          </div>
+                        <% else %>
+                          <!-- Michigan is away, show home team as opponent -->
+                          <%= image_tag team(game["homeId"])[:logo], class: "h-6 w-6" %>
+                          <div class="flex items-center gap-1">
+                            <% if @fetch_rankings && @fetch_rankings[game['homeId']] %>
+                              <span class="text-gray-500 text-xs">#<%= @fetch_rankings[game['homeId']][:current] %></span>
+                            <% end %>
+                            <span class="font-medium">@ <%= team(game['homeId'])[:name] %></span>
+                          </div>
+                        <% end %>
                 </div>
-                <div class="text-sm text-slate-300">
+                    </td>
+                       
+                    <!-- Time -->
+                    <td class="px-6 py-4">
                   <% if game['startTimeTBD'].to_s == 'true' || game['startDate'].strftime("%I:%M %p") == "12:00 AM" %>
-                    <span class="text-gray-400">TBD</span>
+                        <span class="text-gray-500">TBD</span>
+                      <% else %>
+                        <span class="text-gray-600"><%= game['startDate'].strftime("%l:%M %p") %></span>
+                      <% end %>
+                    </td>
+                    
+                    <!-- TV -->
+                    <td class="px-6 py-4">
+                      <% if game['broadcast'] && game['broadcast']['media'] %>
+                        <span class="text-gray-600 text-xs"><%= game['broadcast']['media'] %></span>
+                      <% else %>
+                        <span class="text-gray-400 text-xs">TBD</span>
+                      <% end %>
+                    </td>
+
+                    <!-- Result -->
+                    <td class="px-6 py-4">
+                      <% if game['status'] && game['status']['type'] == 'STATUS_FINAL' %>
+                        <% if game['scores'] && game['scores'].is_a?(Hash) %>
+                          <% home_score = game['scores'][game['homeId']] %>
+                          <% away_score = game['scores'][game['awayId']] %>
+                          <% if home_score && away_score %>
+                            <% if game['homeId'] == '130' %>
+                              <!-- Michigan is home -->
+                              <% if home_score.to_i > away_score.to_i %>
+                                <span class="font-semibold text-green-600">W <%= home_score %>-<%= away_score %></span>
+                              <% else %>
+                                <span class="font-semibold text-red-600">L <%= home_score %>-<%= away_score %></span>
+                              <% end %>
+                            <% else %>
+                              <!-- Michigan is away -->
+                              <% if away_score.to_i > home_score.to_i %>
+                                <span class="font-semibold text-green-600">W <%= away_score %>-<%= home_score %></span>
+                              <% else %>
+                                <span class="font-semibold text-red-600">L <%= away_score %>-<%= home_score %></span>
+                              <% end %>
+                            <% end %>
+                          <% else %>
+                            <span class="text-gray-500">Final</span>
+                          <% end %>
+                        <% else %>
+                          <span class="text-gray-500">Final</span>
+                        <% end %>
+                      <% elsif game['status'] && game['status']['type'] == 'STATUS_IN_PROGRESS' %>
+                        <span class="font-semibold text-blue-600">LIVE</span>
+                      <% else %>
+                        <span class="text-gray-500"></span>
+                      <% end %>
+                    </td>
+                  </tr>
+                <% end %>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Mobile/Tablet Card View -->
+          <div class="lg:hidden">
+            <% @games.each do |game| %>
+              <div class="bg-white border border-gray-200 p-4 <%= 'opacity-70' if game['startDate'].to_date < Date.current %>">
+                <!-- Card Header: Date and Result -->
+                <div class="flex justify-between items-start mb-3">
+                  <div class="font-medium text-gray-900">
+                    <%= game['startDate'].strftime("%a, %b %d") %>
+                  </div>
+                  <div class="text-right">
+                    <% if game['status'] && game['status']['type'] == 'STATUS_FINAL' %>
+                      <% if game['scores'] && game['scores'].is_a?(Hash) %>
+                        <% home_score = game['scores'][game['homeId']] %>
+                        <% away_score = game['scores'][game['awayId']] %>
+                        <% if home_score && away_score %>
+                          <% if game['homeId'] == '130' %>
+                            <!-- Michigan is home -->
+                            <% if home_score.to_i > away_score.to_i %>
+                              <span class="font-semibold text-green-600">W <%= home_score %>-<%= away_score %></span>
+                            <% else %>
+                              <span class="font-semibold text-red-600">L <%= home_score %>-<%= away_score %></span>
+                            <% end %>
+                          <% else %>
+                            <!-- Michigan is away -->
+                            <% if away_score.to_i > home_score.to_i %>
+                              <span class="font-semibold text-green-600">W <%= away_score %>-<%= home_score %></span>
+                            <% else %>
+                              <span class="font-semibold text-red-600">L <%= away_score %>-<%= home_score %></span>
+                            <% end %>
+                          <% end %>
+                        <% else %>
+                          <span class="text-gray-500 text-sm">Final</span>
+                        <% end %>
+                      <% else %>
+                        <span class="text-gray-500 text-sm">Final</span>
+                      <% end %>
+                    <% elsif game['status'] && game['status']['type'] == 'STATUS_IN_PROGRESS' %>
+                      <span class="font-semibold text-blue-600">LIVE</span>
                   <% else %>
-                    <%= game['startDate'].strftime("%I:%M %p") %>
+                      <span class="text-gray-500 text-sm">TBD</span>
                   <% end %>
-                </div>
               </div>
             </div>
             
-            <!-- Main Game Content -->
-            <div class="p-4">
-              <!-- Debug: Game data: <%= game.inspect %> -->
-              <!-- Teams Section -->
-              <div class="flex items-center justify-between mb-4">
-                <!-- Away Team -->
-                <div class="flex items-center gap-3 flex-1">
+                <!-- Opponent -->
+                <div class="flex items-center gap-3 mb-3">
+                  <% if game['homeId'] == '130' %>
+                    <!-- Michigan is home, show away team as opponent -->
                   <%= image_tag team(game["awayId"])[:logo], class: "h-8 w-8" %>
-                  <div class="flex flex-col">
                     <div class="flex items-center gap-2">
                       <% if @fetch_rankings && @fetch_rankings[game['awayId']] %>
                         <span class="text-gray-500 text-sm">#<%= @fetch_rankings[game['awayId']][:current] %></span>
                       <% end %>
-                      <span class="font-semibold text-base"><%= team(game['awayId'])[:name] %></span>
+                      <span class="font-medium text-lg">vs <%= team(game['awayId'])[:name] %></span>
                     </div>
-                    <span class="text-xs text-gray-500">(0-0)</span>
-                  </div>
-                </div>
-                
-                <!-- VS -->
-                <div class="mx-4 text-gray-400 font-semibold">VS</div>
-                
-                <!-- Home Team -->
-                <div class="flex items-center gap-3 flex-1 justify-end">
-                  <div class="flex flex-col items-end">
+                  <% else %>
+                    <!-- Michigan is away, show home team as opponent -->
+                    <%= image_tag team(game["homeId"])[:logo], class: "h-8 w-8" %>
                     <div class="flex items-center gap-2">
-                      <span class="font-semibold text-base"><%= team(game['homeId'])[:name] %></span>
                       <% if @fetch_rankings && @fetch_rankings[game['homeId']] %>
                         <span class="text-gray-500 text-sm">#<%= @fetch_rankings[game['homeId']][:current] %></span>
                       <% end %>
+                      <span class="font-medium text-lg">@ <%= team(game['homeId'])[:name] %></span>
                     </div>
-                    <span class="text-xs text-gray-500">(0-0)</span>
-                  </div>
-                  <%= image_tag team(game["homeId"])[:logo], class: "h-8 w-8" %>
-                </div>
+                  <% end %>
               </div>
               
-              <!-- Game Details -->
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <!-- Venue and Weather -->
-                <div class="space-y-2">
-                  <% if game['venue'] %>
-                    <div class="flex items-center gap-2 text-sm">
-                      <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                      </svg>
-                      <span class="text-gray-700"><%= game['venue'] %></span>
+                <!-- Game Details -->
+                <div class="flex justify-between items-center text-sm text-gray-600">
+                  <div class="flex items-center gap-4">
+                    <!-- Time -->
+                    <div>
+                      <% if game['startTimeTBD'].to_s == 'true' || game['startDate'].strftime("%I:%M %p") == "12:00 AM" %>
+                        <span class="text-gray-500">TBD</span>
+                      <% else %>
+                        <span><%= game['startDate'].strftime("%l:%M %p") %></span>
+                      <% end %>
                     </div>
-                  <% end %>
-                  
-                  <!-- Weather -->
-                  <% if game['weather'] && game['weather']['temperature'] != 'N/A' %>
-                    <div class="flex items-center gap-2 text-sm">
-                        <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"></path>
-                        </svg>
-                        <span class="text-gray-700"><%= game['weather']['temperature'] %>° <%= game['weather']['displayValue'] %></span>
-                      </div>
-                  <% end %>
-                </div>
-                
-                <!-- Broadcast and Tickets -->
-                <div class="space-y-2">
-                  <% if game['broadcast'] %>
-                    <div class="flex items-center gap-2 text-sm">
-                      <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 002 2v8a2 2 0 002 2z"></path>
-                      </svg>
-                      <span class="text-gray-700"><%= game['broadcast']['media'] %></span>
+                    
+                    <!-- TV -->
+                    <div>
+                      <% if game['broadcast'] && game['broadcast']['media'] %>
+                        <span><%= game['broadcast']['media'] %></span>
+                      <% else %>
+                        <span class="text-gray-400">TBD</span>
+                      <% end %>
                     </div>
-                  <% end %>
-                </div>
-              </div>
-              
-              <!-- Betting Odds -->
-              <% if game['odds'] && game['odds']['spread'] != 'N/A' %>
-                <!-- Debug: <%= game['odds'].inspect %> -->
-                <div class="bg-gray-50 p-3 rounded-lg mb-4">
-                  <div class="flex items-center justify-between text-sm">
-                    <div class="flex items-center gap-2">
-                      <span class="text-slate-300"><%= game['odds']['provider'] %></span>
-                    </div>
-                    <div class="flex items-center gap-4">
-                      <div class="text-center">
-                        <div class="text-gray-500 text-xs">Spread</div>
-                        <div class="font-semibold"><%= game['odds']['spread'] %></div>
-                      </div>
-                      <div class="text-center">
-                        <div class="text-gray-500 text-xs">Total</div>
-                        <div class="font-semibold"><%= game['odds']['total'] %></div>
-                      </div>
                     </div>
                   </div>
                 </div>
               <% end %>
-            </div>
           </div>
-        <% end %>
       <% else %>
         <div class="text-center py-8">
           <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
           <p class="mt-2 text-slate-300">Loading schedule...</p>
         </div>
       <% end %>
-    </div>
   </div>
 
   <div class="border border-gray-200 bg-white rounded-3xl">
-    <div class="pl-4 text-lg p-2 border-b border-gray-200">AP Top 25 Rankings</div>
+    <div class="text-xl font-bold border-b border-gray-200 py-4 px-6">AP Top 25 Rankings</div>
     <div class="pl-4 text-[10px] uppercase p-2 bg-gray-50 border-b border-gray-200">Current Week</div>
     <div class="text-sm">
       <% if @fetch_rankings && @fetch_rankings.any? %>
@@ -227,22 +314,22 @@
             </div>
             <div class="font-medium flex items-center gap-2">
               <%= image_tag team(team_id)[:logo], class: "h-6 w-6" %>
-              <%= team(team_id)[:name] %>
+              <%= team(team_id)[:name] %> <span class="text-gray-400">(<%= team(team_id)[:record] %>)</span>
             </div>
-            <div class="flex flex-col text-xs text-slate-300 ml-auto text-right">
+            <div class="flex items-center gap-2 text-xs text-slate-400 ml-auto text-right">
               <% if rank_data[:previous] && rank_data[:previous] != 0 %>
+                <div class="">
+                  Previous
+                </div>
                 <div class="font-semibold">
                   #<%= rank_data[:previous] %>
                 </div>
-                <div class="text-base text-gray-300">
+              <% else %>
+                <div class="">
                   Previous
                 </div>
-              <% else %>
                 <div class="font-semibold">
                   NR
-                </div>
-                <div class="text-base text-gray-300">
-                  Previous
                 </div>
               <% end %>
             </div>

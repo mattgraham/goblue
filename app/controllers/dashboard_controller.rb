@@ -10,7 +10,8 @@ class DashboardController < ApplicationController
     start_time = Time.current
 
     # Cache the entire dashboard data for 30 minutes
-    @dashboard_data = Rails.cache.fetch("dashboard_data", expires_in: 30.minutes) do
+    @dashboard_data = Rails.cache.fetch("dashboard_data_v2", expires_in: 30.minutes) do
+      Rails.logger.info "Cache miss: Fetching fresh dashboard data"
       fetch_dashboard_data
     end
 
@@ -22,7 +23,7 @@ class DashboardController < ApplicationController
     @scoreboard = @dashboard_data[:scoreboard]
 
     load_time = Time.current - start_time
-    Rails.logger.info "Dashboard loaded in #{load_time.round(2)} seconds"
+    Rails.logger.info "Dashboard loaded in #{load_time.round(2)} seconds (cached: #{Rails.cache.exist?('dashboard_data')})"
     Rails.logger.info "Fetch rankings result: #{@fetch_rankings.inspect}"
   end
 
@@ -32,7 +33,9 @@ class DashboardController < ApplicationController
     # Use cached data if available, otherwise fetch from API
     data = ApiCacheService.get_cached_data(:michigan_schedule)
     
-    unless data
+    if data
+      Rails.logger.info "Using cached Michigan schedule data"
+    else
       Rails.logger.warn "No cached Michigan schedule data found, fetching from API..."
       response = HTTParty.get(
         "https://site.api.espn.com/apis/site/v2/sports/football/college-football/teams/Michigan/schedule?season=2025&seasontype=2",
@@ -82,12 +85,18 @@ class DashboardController < ApplicationController
         # Extract team information
         if competition["competitors"]
           game["competitors"] = competition["competitors"].map do |competitor|
+            # Extract record information
+            overall_record = competitor["record"]&.find { |r| r["type"] == "total" }&.dig("displayValue") || "0-0"
+            conference_record = competitor["record"]&.find { |r| r["type"] == "vsconf" }&.dig("displayValue") || "0-0"
+            
             {
               "id" => competitor["team"]["id"],
               "name" => competitor["team"]["displayName"],
               "abbreviation" => competitor["team"]["abbreviation"],
               "homeAway" => competitor["homeAway"],
-              "logo" => competitor["team"]["logos"]&.first&.dig("href")
+              "logo" => competitor["team"]["logos"]&.first&.dig("href"),
+              "overall_record" => overall_record,
+              "conference_record" => conference_record
             }
           end
 
@@ -97,6 +106,18 @@ class DashboardController < ApplicationController
 
           game["homeId"] = home_competitor["team"]["id"] if home_competitor
           game["awayId"] = away_competitor["team"]["id"] if away_competitor
+          
+          # Set team records for easy access
+          game["homeRecord"] = home_competitor["record"]&.find { |r| r["type"] == "total" }&.dig("displayValue") || "0-0" if home_competitor
+          game["awayRecord"] = away_competitor["record"]&.find { |r| r["type"] == "total" }&.dig("displayValue") || "0-0" if away_competitor
+          
+          # Extract scores
+          if home_competitor && away_competitor
+            game["scores"] = {
+              game["homeId"] => home_competitor["score"]&.dig("displayValue"),
+              game["awayId"] => away_competitor["score"]&.dig("displayValue")
+            }
+          end
         end
 
         # Extract broadcast information
@@ -503,13 +524,24 @@ class DashboardController < ApplicationController
     team_data = data["team"]
 
     # Handle case where team_data might be nil
-    return { logo: nil, name: "Unknown Team", color: nil, abbreviation: nil } unless team_data
+    return { logo: nil, name: "Unknown Team", color: nil, abbreviation: nil, record: "N/A" } unless team_data
+
+    # Extract record information
+    record = "N/A"
+    if team_data["record"] && team_data["record"]["items"]
+      records = team_data["record"]["items"]
+      overall_record = records.find { |r| r["type"] == "total" }
+      if overall_record
+        record = overall_record["summary"] || "#{overall_record['wins']}-#{overall_record['losses']}"
+      end
+    end
 
     {
       logo: team_data.dig("logos", 0, "href"),
       name: team_data["displayName"],
       color: team_data["color"],
-      abbreviation: team_data["abbreviation"]
+      abbreviation: team_data["abbreviation"],
+      record: record
     }
   end
 
@@ -517,7 +549,9 @@ class DashboardController < ApplicationController
     # Use cached data if available, otherwise fetch from API
     data = ApiCacheService.get_cached_data(:ap_rankings)
     
-    unless data
+    if data
+      Rails.logger.info "Using cached rankings data"
+    else
       Rails.logger.warn "No cached rankings data found, fetching from API..."
       response = HTTParty.get(
         "http://site.api.espn.com/apis/site/v2/sports/football/college-football/rankings?week=1&seasonType=2&rankings=1",
@@ -576,7 +610,9 @@ class DashboardController < ApplicationController
     # Use cached data if available, otherwise fetch from API
     data = ApiCacheService.get_cached_data(:michigan_team)
     
-    unless data
+    if data
+      Rails.logger.info "Using cached Michigan team data"
+    else
       Rails.logger.warn "No cached Michigan team data found, fetching from API..."
       response = HTTParty.get(
         "https://site.api.espn.com/apis/site/v2/sports/football/college-football/teams/130",
@@ -624,7 +660,9 @@ class DashboardController < ApplicationController
     # Use cached data if available, otherwise fetch from API
     data = ApiCacheService.get_cached_data(:scoreboard)
     
-    unless data
+    if data
+      Rails.logger.info "Using cached scoreboard data"
+    else
       Rails.logger.warn "No cached scoreboard data found, fetching from API..."
       response = HTTParty.get(
         "https://site.api.espn.com/apis/site/v2/sports/football/college-football/scoreboard",
