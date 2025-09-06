@@ -39,7 +39,22 @@ namespace :api_cache do
   task clear: :environment do
     puts "Clearing all cached API data..."
     ApiCacheService.clear_cache
-    puts "✅ Cache cleared successfully!"
+    puts "✅ API cache cleared successfully!"
+  end
+
+  desc "Clear Rails cache"
+  task clear_rails: :environment do
+    puts "Clearing Rails cache..."
+    Rails.cache.clear
+    puts "✅ Rails cache cleared successfully!"
+  end
+
+  desc "Clear all caches (API + Rails)"
+  task clear_all: :environment do
+    puts "Clearing all caches..."
+    ApiCacheService.clear_cache
+    Rails.cache.clear
+    puts "✅ All caches cleared successfully!"
   end
 
   desc "Show cache status"

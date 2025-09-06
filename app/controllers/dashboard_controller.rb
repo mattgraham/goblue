@@ -9,8 +9,8 @@ class DashboardController < ApplicationController
   def index
     start_time = Time.current
 
-    # Cache the entire dashboard data for 5 minutes
-    @dashboard_data = Rails.cache.fetch("dashboard_data", expires_in: 5.minutes) do
+    # Cache the entire dashboard data for 30 minutes
+    @dashboard_data = Rails.cache.fetch("dashboard_data", expires_in: 30.minutes) do
       fetch_dashboard_data
     end
 
@@ -173,9 +173,11 @@ class DashboardController < ApplicationController
   end
 
     def get_current_week
-    # For the 2025 season, we need to determine the current week
-    # Since it's August 30, 2025, this should be Week 1
-    begin
+    # Cache current week for 1 hour
+    Rails.cache.fetch("current_week", expires_in: 1.hour) do
+      # For the 2025 season, we need to determine the current week
+      # Since it's August 30, 2025, this should be Week 1
+      begin
       response = HTTParty.get(
         "https://site.api.espn.com/apis/site/v2/sports/football/college-football/scoreboard",
         timeout: 5
@@ -193,19 +195,20 @@ class DashboardController < ApplicationController
       Rails.logger.error "Failed to fetch current week: #{e.message}"
     end
 
-    # Fallback: calculate week based on season start (typically late August)
-    season_start = Date.new(2025, 8, 30) # Approximate start of 2025 season
-    current_date = Date.current
-    week_diff = ((current_date - season_start).to_i / 7.0).ceil
-    calculated_week = [ week_diff, 1 ].max # Ensure we don't return week 0 or negative
-    Rails.logger.info "Calculated current week: #{calculated_week}"
-    calculated_week
+      # Fallback: calculate week based on season start (typically late August)
+      season_start = Date.new(2025, 8, 30) # Approximate start of 2025 season
+      current_date = Date.current
+      week_diff = ((current_date - season_start).to_i / 7.0).ceil
+      calculated_week = [ week_diff, 1 ].max # Ensure we don't return week 0 or negative
+      Rails.logger.info "Calculated current week: #{calculated_week}"
+      calculated_week
+    end
   end
 
       def fetch_game_odds(away_team_id, home_team_id)
-    # Cache odds for 30 minutes
+    # Cache odds for 2 hours
     cache_key = "game_odds_#{away_team_id}_#{home_team_id}"
-    Rails.cache.fetch(cache_key, expires_in: 30.minutes) do
+    Rails.cache.fetch(cache_key, expires_in: 2.hours) do
       begin
         # Try to fetch odds from the specific game endpoint first
         # This might work better for future games
@@ -360,9 +363,9 @@ class DashboardController < ApplicationController
   end
 
   def fetch_game_weather(away_team_id, home_team_id)
-    # Cache weather for 1 hour
+    # Cache weather for 4 hours
     cache_key = "game_weather_#{away_team_id}_#{home_team_id}"
-    Rails.cache.fetch(cache_key, expires_in: 1.hour) do
+    Rails.cache.fetch(cache_key, expires_in: 4.hours) do
       begin
         # Try to fetch weather from the specific game endpoint first
         game_id = find_game_id(away_team_id, home_team_id)
