@@ -10,7 +10,7 @@ class DashboardController < ApplicationController
     start_time = Time.current
 
     # Cache the entire dashboard data for 30 minutes
-    @dashboard_data = Rails.cache.fetch("dashboard_data_v2", expires_in: 30.minutes) do
+    @dashboard_data = Rails.cache.fetch("dashboard_data_v3_#{Time.current.to_i}", expires_in: 30.minutes) do
       Rails.logger.info "Cache miss: Fetching fresh dashboard data"
       fetch_dashboard_data
     end
@@ -182,7 +182,7 @@ class DashboardController < ApplicationController
     scoreboard = fetch_scoreboard
 
     # Build teams cache to avoid N+1 queries
-    teams_cache = build_teams_cache(games, rankings, scoreboard)
+    teams_cache = build_teams_cache(games, {}, scoreboard)
 
     {
       games: games,

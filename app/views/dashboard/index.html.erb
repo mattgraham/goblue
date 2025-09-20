@@ -1,91 +1,63 @@
 <div class="w-full p-8 text-white">
-  <div class="flex flex-col md:flex-row items-center gap-2">
+  <div class="flex flex-col md:flex-row items-center gap-4">
     <%= image_tag team(130)[:logo], class: "h-24 w-24" %>
-    <div class="text-xl md:text-4xl uppercase tracking-wide flex items-center gap-1">
+    <div class="text-xl md:text-4xl uppercase tracking-wide flex items-start gap-1">
       <% if @fetch_rankings && @fetch_rankings['130'] %>
         <span class="text-gray-500 text-base ml-2">#<%= @fetch_rankings['130'][:current] %></span>
       <% end %>
-      <div class="font-bold">Michigan</div><div class="">Wolverines</div>
+      <div class="flex items-center gap-2">
+        <div class="font-bold">Michigan</div>
+        <div class="">Wolverines</div>
+      </div>
+    </div>
+    <div class="text-sm text-slate-300 tracking-wide">
+      <%= @team_records['130'][:summary] %>
+      (<%= @team_records['130'][:record_stats]['divisionWins'].to_i %>-<%= @team_records['130'][:record_stats]['divisionLosses'].to_i %>: <%= @team_records['130'][:standing_summary] %>)
     </div>
   </div>
   
   <!-- Team Record and Standing Summary -->
   <% if @team_records && @team_records['130'] %>
-    <div class="mt-6 p-8 rounded-3xl border border-white/10 bg-white/5">
-      <div class="flex items-center justify-between flex-col md:flex-row gap-4">
-        <div class="flex items-center gap-6">
-          <div class="text-center">
-            <div class="text-sm text-slate-300 tracking-wide">Overall Record</div>
-            <div class="text-4xl font-bold text-white"><%= @team_records['130'][:summary] %></div>
-          </div>
-          
-          <% if @team_records['130'][:conference] != "N/A" %>
-            <div class="text-center">
-              <div class="text-sm text-slate-300 tracking-wide">Conference</div>
-              <div class="text-xl font-bold text-white"><%= @team_records['130'][:conference] %> <div class="text-xs text-gray-500">(<%= @team_records['130'][:record_stats]['divisionWins'].to_i %>-<%= @team_records['130'][:record_stats]['divisionLosses'].to_i %>)</div></div>
-            </div>
-          <% end %>
-        </div>
-        
-        <div class="text-center">
-          <div class="text-sm text-slate-300 tracking-wide">Conference Standing</div>
-          <div class="text-4xl font-bold text-white"><%= @team_records['130'][:record_stats]['divisionWins'].to_i %>-<%= @team_records['130'][:record_stats]['divisionLosses'].to_i %></div>
-          <div class="text-lg font-bold text-blue-500"><%= @team_records['130'][:standing_summary] %></div>
-        </div>
-      </div>
+    <div class="mt-6 p-8 rounded-lg border border-white/10">
       
       <!-- Detailed Record Stats -->
       <% if @team_records['130'][:record_stats].any? %>
-        <div class="mt-4 pt-4 border-t border-white/10">
           <div class="text-sm text-slate-300 tracking-wide mb-4 text-center">Season Statistics</div>
-          <div class="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-6 gap-2">
+          <div class="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-4 gap-4">
             <% stats = @team_records['130'][:record_stats] %>
             <% if stats['pointsFor'] %>
-              <div class="text-center border rounded-2xl border-white/10 p-2 bg-white/5">
-                <div class="text-base text-gray-300">Points For</div>
-                <div class="font-semibold text-xl"><%= stats['pointsFor'] %></div>
+              <div class="text-center border rounded-lg border-white/5 p-4 bg-white/5">
+                <div class="text-xs text-gray-300 uppercase mb-1">Points For</div>
+                <div class="font-semibold text-lg lg:text-3xl"><%= stats['pointsFor'].round(1) %></div>
               </div>
             <% end %>
             <% if stats['pointsAgainst'] %>
-              <div class="text-center border rounded-2xl border-white/10 p-2 bg-white/5">
-                <div class="text-base text-gray-300">Points Against</div>
-                <div class="font-semibold text-xl"><%= stats['pointsAgainst'] %></div>
+              <div class="text-center border rounded-lg border-white/5 p-4 bg-white/5">
+                <div class="text-xs text-gray-300 uppercase mb-1">Points Against</div>
+                <div class="font-semibold text-lg lg:text-3xl"><%= stats['pointsAgainst'].round(1) %></div>
               </div>
             <% end %>
             <% if stats['avgPointsFor'] %>
-              <div class="text-center border rounded-2xl border-white/10 p-2 bg-white/5">
-                <div class="text-base text-gray-300">Avg Points For</div>
-                <div class="font-semibold text-xl"><%= stats['avgPointsFor'] %></div>
+              <div class="text-center border rounded-lg border-white/5 p-4 bg-white/5">
+                <div class="text-xs text-gray-300 uppercase mb-1">Avg Points For</div>
+                <div class="font-semibold text-lg lg:text-3xl"><%= stats['avgPointsFor'].round(1) %></div>
               </div>
             <% end %>
             <% if stats['avgPointsAgainst'] %>
-              <div class="text-center border rounded-2xl border-white/10 p-2 bg-white/5">
-                <div class="text-base text-gray-300">Avg Points Against</div>
-                <div class="font-semibold text-xl"><%= stats['avgPointsAgainst'] %></div>
-              </div>
-            <% end %>
-            <% if stats['winPercent'] %>
-              <div class="text-center border rounded-2xl border-white/10 p-2 bg-white/5">
-                <div class="text-base text-gray-300">Win %</div>
-                <div class="font-semibold text-xl"><%= (stats['winPercent'] * 100).round(1) %>%</div>
-              </div>
-            <% end %>
-            <% if stats['gamesPlayed'] %>
-              <div class="text-center border rounded-2xl border-white/10 p-2 bg-white/5">
-                <div class="text-base text-gray-300">Games Played</div>
-                <div class="font-semibold text-xl"><%= stats['gamesPlayed'] %></div>
+              <div class="text-center border rounded-lg border-white/5 p-4 bg-white/5">
+                <div class="text-xs text-gray-300 uppercase mb-1">Avg Points Against</div>
+                <div class="font-semibold text-lg lg:text-3xl"><%= stats['avgPointsAgainst'].round(1) %></div>
               </div>
             <% end %>
           </div>
-        </div>
       <% end %>
     </div>
   <% end %>
   
 </div>
 
-<div data-controller="game-filter" class="w-full max-w-screen-2xl mx-auto my-12 grid grid-cols-1 md:grid-cols-2 gap-6 md:p-6">
-  <div class="border border-gray-200 rounded-3xl bg-white">
+<div data-controller="game-filter" class="w-full mx-auto my-6 grid grid-cols-1 md:grid-cols-2 gap-6 md:p-6">
+  <div class="border border-gray-200 rounded-lg bg-white">
     <div class="flex items-center justify-between border-b border-gray-200 py-4 px-6">
       <div class="text-xl font-bold">2025 Schedule</div>
       <div class="flex items-center gap-2">
@@ -301,53 +273,7 @@
         </div>
       <% end %>
   </div>
-
-  <div class="border border-gray-200 bg-white rounded-3xl">
-    <div class="text-xl font-bold border-b border-gray-200 py-4 px-6">AP Top 25 Rankings</div>
-    <div class="pl-4 text-[10px] uppercase p-2 bg-gray-50 border-b border-gray-200">Current Week</div>
-    <div class="text-sm">
-      <% if @fetch_rankings && @fetch_rankings.any? %>
-        <% @fetch_rankings.sort_by { |team_id, rank_data| rank_data[:current] }.each do |team_id, rank_data| %>
-          <div class="flex items-center p-3 border-b border-gray-200 gap-2">
-            <div class="text-blue-600 font-semibold">
-              #<%= rank_data[:current] %>
-            </div>
-            <div class="font-medium flex items-center gap-2">
-              <%= image_tag team(team_id)[:logo], class: "h-6 w-6" %>
-              <%= team(team_id)[:name] %> <span class="text-gray-400">(<%= team(team_id)[:record] %>)</span>
-            </div>
-            <div class="flex items-center gap-2 text-xs text-slate-400 ml-auto text-right">
-              <% if rank_data[:previous] && rank_data[:previous] != 0 %>
-                <div class="">
-                  Previous
-                </div>
-                <div class="font-semibold">
-                  #<%= rank_data[:previous] %>
-                </div>
-              <% else %>
-                <div class="">
-                  Previous
-                </div>
-                <div class="font-semibold">
-                  NR
-                </div>
-              <% end %>
-            </div>
-          </div>
-        <% end %>
-      <% else %>
-        <div class="text-center py-8">
-          <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-          <p class="mt-2 text-slate-300">Loading rankings...</p>
-        </div>
-      <% end %>
-    </div>
-  </div>
-</div>
-
-<!-- This Week's Scoreboard Section -->
-<div class="w-full max-w-screen-2xl mx-auto my-12">
-  <div class="border border-gray-200 bg-white rounded-3xl">
+  <div class="border border-gray-200 bg-white rounded-lg">
     <div class="pl-4 text-sm sm:text-lg p-2 border-b border-gray-200">This Week's Scoreboard</div>
     <div class="pl-4 text-[8px] sm:text-[10px] uppercase p-2 bg-gray-50 border-b border-gray-200">Ranked Teams Only</div>
     <div class="text-sm">
@@ -497,4 +423,9 @@
       <% end %>
     </div>
   </div>
+</div>
+
+<!-- This Week's Scoreboard Section -->
+<div class="w-full max-w-screen-2xl mx-auto my-12">
+
 </div>
